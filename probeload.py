@@ -467,8 +467,16 @@ def processFile():
 
 	# Notes
 
-	if len(notes) > 0:
-	    noteFile.write('%s|1|%s|%s|%s\n' % (probeKey, notes, loaddate, loaddate))
+        noteSeq = 1
+		
+        while len(notes) > 255:
+	    noteFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes[:255], loaddate, loaddate))
+            newnote = notes[255:]
+            notes = newnote
+            noteSeq = noteSeq + 1
+
+        if len(notes) > 0:
+	    noteFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes, loaddate, loaddate))
 
         accKey = accKey + 1
         mgiKey = mgiKey + 1
@@ -506,3 +514,6 @@ bcpFiles()
 exit(0)
 
 # $Log$
+# Revision 1.1  2004/09/08 19:33:29  lec
+# TR 6118
+#
