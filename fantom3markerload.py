@@ -1,18 +1,15 @@
 #!/usr/local/bin/python
 
 #
-# Program: fantom3load.py
+# Program: fantom3loadmarker.py
 #
 # Original Author: Lori Corbani
 #
 # Purpose:
 #
-#	To load new Probes into:
+#	To load new Probe/Markers into:
 #
-#	PRB_Probe
-#	PRB_Reference
-#	ACC_Accession
-#	ACC_AccessionReference
+#	PRB_Marker
 #
 # Requirements Satisfied by This Program:
 #
@@ -30,24 +27,14 @@
 # Inputs:
 #
 #	A tab-delimited file in the format:
-#		field 1:  Probe Name
-#		field 2:  MGI ID of Clone
-#		field 3:  Reference (J:#####)
-#		field 4:  Library Name
-#		field 5:  Region Covered
-#		field 6:  Insert Site
-#		field 7:  Insert Size
-#		field 8:  Accession ID (Sequence DB:####|...)
-#		field 9:  Created By
+#		field 1:  MGI ID of Marker
+#		field 2:  RIKEN Clone ID
 #
 # Outputs:
 #
-#       4 BCP files:
+#       1 BCP files:
 #
-#       PRB_Probe.bcp                   master Probe records
-#       PRB_Reference.bcp         	Probe Reference records
-#       ACC_Accession.bcp               Accession records
-#       ACC_AccessionReference.bcp      Accession Reference records
+#       PRB_Marker.bcp
 #
 #       Diagnostics file of all input parameters and SQL commands
 #       Error file
@@ -67,11 +54,9 @@ import sys
 import os
 import string
 import getopt
-import accessionlib
 import db
 import mgi_utils
 import loadlib
-import sourceloadlib
 
 #globals
 
@@ -85,19 +70,13 @@ diagFile = ''		# diagnostic file descriptor
 errorFile = ''		# error file descriptor
 inputFile = ''		# file descriptor
 probeFile = ''          # file descriptor
-refFile = ''            # file descriptor
-accFile = ''            # file descriptor
-accRefFile = ''         # file descriptor
 
-probeTable = 'PRB_Probe'
-refTable = 'PRB_Reference'
-accTable = 'ACC_Accession'
-accRefTable = 'ACC_AccessionReference'
+probeTable = 'PRB_Marker'
+jnum = 'J:99680'
+relationship = 'E'
+createdBy = 'fantom3'
 
 probeFileName = probeTable + '.bcp'
-refFileName = refTable + '.bcp'
-accFileName = accTable + '.bcp'
-accRefFileName = accRefTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -105,12 +84,6 @@ passwordFileName = ''	# password file name
 
 mode = ''		# processing mode (load, preview)
 probeKey = 0            # PRB_Probe._Probe_key
-refKey = 0		# PRB_Reference._Reference_key
-accKey = 0              # ACC_Accession._Accession_key
-
-mgiTypeKey = 3		# Molecular Segment
-vectorType = 'Phagemid'
-segmentType = 'cDNA'
 
 loaddate = loadlib.loaddate
 
@@ -166,7 +139,7 @@ def exit(
 def init():
     global diagFile, errorFile, inputFile, errorFileName, diagFileName, passwordFileName
     global mode
-    global probeFile, refFile, accFile, accRefFile
+    global probeFile
  
     try:
         optlist, args = getopt.getopt(sys.argv[1:], 'S:D:U:P:M:I:')
@@ -233,21 +206,6 @@ def init():
     except:
         exit(1, 'Could not open file %s\n' % probeFileName)
 
-    try:
-        refFile = open(refFileName, 'w')
-    except:
-        exit(1, 'Could not open file %s\n' % refFileName)
-
-    try:
-        accFile = open(accFileName, 'w')
-    except:
-        exit(1, 'Could not open file %s\n' % accFileName)
-
-    try:
-        accRefFile = open(accRefFileName, 'w')
-    except:
-        exit(1, 'Could not open file %s\n' % accRefFileName)
-
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
 
@@ -280,25 +238,6 @@ def verifyMode():
     elif mode != 'full':
         exit(1, 'Invalid Processing Mode:  %s\n' % (mode))
 
-# Purpose:  sets global primary key variables
-# Returns:  nothing
-# Assumes:  nothing
-# Effects:  sets global primary key variables
-# Throws:   nothing
-
-def setPrimaryKeys():
-
-    global probeKey, refKey, accKey
-
-    results = db.sql('select maxKey = max(_Probe_key) + 1 from PRB_Probe', 'auto')
-    probeKey = results[0]['maxKey']
-
-    results = db.sql('select maxKey = max(_Reference_key) + 1 from PRB_Reference', 'auto')
-    refKey = results[0]['maxKey']
-
-    results = db.sql('select maxKey = max(_Accession_key) + 1 from ACC_Accession', 'auto')
-    accKey = results[0]['maxKey']
-
 # Purpose:  BCPs the data into the database
 # Returns:  nothing
 # Assumes:  nothing
@@ -313,21 +252,13 @@ def bcpFiles():
         return
 
     probeFile.close()
-    refFile.close()
-    accFile.close()
-    accRefFile.close()
 
     bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
     bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
 
     bcp1 = '%s%s in %s %s' % (bcpI, probeTable, probeFileName, bcpII)
-    bcp2 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
-    bcp3 = '%s%s in %s %s' % (bcpI, accTable, accFileName, bcpII)
-    bcp4 = '%s%s in %s %s' % (bcpI, accRefTable, accRefFileName, bcpII)
-
-    for bcpCmd in [bcp1, bcp2, bcp3, bcp4]:
-	diagFile.write('%s\n' % bcpCmd)
-	os.system(bcpCmd)
+    diagFile.write('%s\n' % bcp1)
+    os.system(bcp1)
 
     return
 
@@ -339,12 +270,11 @@ def bcpFiles():
 
 def processFile():
 
-    global probeKey, refKey, accKey
-
-    vectorKey = sourceloadlib.verifyVectorType(vectorType, 0, errorFile)
-    segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, 0, errorFile)
-
     lineNum = 0
+
+    referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
+    userKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+
     # For each line in the input file
 
     for line in inputFile.readlines():
@@ -356,67 +286,28 @@ def processFile():
         tokens = string.split(line[:-1], '\t')
 
         try:
-	    name = tokens[0]
-	    mgiID = tokens[1]
-	    jnum = tokens[2]
-	    library = tokens[3]
-	    regionCovered = tokens[4]
-	    insertSite = tokens[5]
-	    insertSize = tokens[6]
-	    sequenceIDs = tokens[7]
-	    createdBy = tokens[9]
+	    mgiID = tokens[0]
+	    cloneIDs = tokens[1]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
-        referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
-	libraryKey = sourceloadlib.verifyLibrary(library, lineNum, errorFile)
-	userKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+	markerKey = loadlib.verifyObject(mgiID, '2', None, lineNum, errorFile)
 
-	# sequence IDs
-	seqAccDict = {}
-	for seqID in string.split(sequenceIDs, '|'):
-	    if len(seqID) > 0:
-	        [logicalDB, acc] = string.split(seqID, ':')
-	        logicalDBKey = loadlib.verifyLogicalDB(logicalDB, lineNum, errorFile)
-	        if logicalDBKey > 0:
-		    seqAccDict[acc] = logicalDBKey
+	for cloneID in string.split(cloneIDs, ','):
+	    cloneKey = loadlib.verifyObject(cloneID, '3', None, lineNum, errorFile)
 
-        if vectorKey == 0 or segmentTypeKey == 0 \
-	   or referenceKey == 0 or userKey == 0 or libraryKey == 0:
-            # set error flag to true
-            error = 1
+            if referenceKey == 0 or userKey == 0 or markerKey == 0 or cloneKey == 0:
+                # set error flag to true
+                error = 1
 
-        # if errors, continue to next record
-        if error:
-            continue
+            # if errors, continue to next record
+            if error:
+                continue
 
-        # if no errors, process the probe
+            # if no errors, process the probe
 
-        probeFile.write('%d|%s||%s|%s|%s|||%s|%s|%s||%s|%s|%s|%s\n' \
-            % (probeKey, name, libraryKey, vectorKey, segmentTypeKey, mgi_utils.prvalue(regionCovered), \
-	    mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), userKey, userKey, loaddate, loaddate))
-
-        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' % (refKey, probeKey, referenceKey, userKey, userKey, loaddate, loaddate))
-
-        # MGI Accession ID of clone
-	prefixPart, numericPart = accessionlib.split_accnum(mgiID)
-
-        accFile.write('%s|%s|%s|%s|1|%d|%d|0|1|%s|%s|%s|%s\n' \
-            % (accKey, mgiID, prefixPart, numericPart, probeKey, mgiTypeKey, userKey, userKey, loaddate, loaddate))
-
-        accKey = accKey + 1
-
-	# sequence accession ids
-	for acc in seqAccDict.keys():
-	    prefixPart, numericPart = accessionlib.split_accnum(acc)
-            accFile.write('%s|%s|%s|%s|%s|%d|%d|0|1|%s|%s|%s|%s\n' \
-                % (accKey, acc, prefixPart, numericPart, seqAccDict[acc], probeKey, mgiTypeKey, userKey, userKey, loaddate, loaddate))
-            accRefFile.write('%s|%s|%s|%s|%s|%s\n' \
-                % (accKey, referenceKey, userKey, userKey, loaddate, loaddate))
-	    accKey = accKey + 1
-
-	refKey = refKey + 1
-        probeKey = probeKey + 1
+            probeFile.write('%d|%d|%d|%s|%s|%s|%s|%s\n' \
+                % (cloneKey, markerKey, referenceKey, relationship, userKey, userKey, loaddate, loaddate))
 
     #	end of "for line in inputFile.readlines():"
 
@@ -426,7 +317,6 @@ def processFile():
 
 init()
 verifyMode()
-setPrimaryKeys()
 processFile()
 bcpFiles()
 exit(0)
