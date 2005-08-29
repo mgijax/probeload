@@ -36,22 +36,23 @@
 #	A tab-delimited file in the format:
 #		field 1:  Probe Name
 #		field 2:  Reference (J:#####)
-#		field 3:  Organism
-#		field 4:  Strain
-#		field 5:  Tissue
-#		field 6:  Gender
-#		field 7:  Cell Line
-#		field 8:  Age
-#		field 9:  Vector Type
-#		field 10: Segment Type
-#		field 11: Region Covered
-#		field 12: Insert Site
-#		field 13: Insert Size
-#		field 14: MGI Marker
-#		field 15: Relationship
-#		field 16: Sequence ID	(LogicalDB:Acc ID|...)
-#		field 17: Notes
-#		field 18: Created By
+#		field 3:  Source Name
+#		field 4:  Organism
+#		field 5:  Strain
+#		field 6:  Tissue
+#		field 7:  Gender
+#		field 8:  Cell Line
+#		field 9:  Age
+#		field 10: Vector Type
+#		field 11: Segment Type
+#		field 12: Region Covered
+#		field 13: Insert Site
+#		field 14: Insert Size
+#		field 15: MGI Marker
+#		field 16: Relationship
+#		field 17: Sequence ID	(LogicalDB:Acc ID|...)
+#		field 18: Notes
+#		field 19: Created By
 #
 # Outputs:
 #
@@ -398,37 +399,55 @@ def processFile():
         try:
 	    name = tokens[0]
 	    jnum = tokens[1]
-	    organism = tokens[2]
-	    strain = tokens[3]
-	    tissue = tokens[4]
-	    gender = tokens[5]
-	    cellLine = tokens[6]
-	    age = tokens[7]
-	    vectorType = tokens[8]
-	    segmentType = tokens[9]
-	    regionCovered = tokens[10]
-	    insertSite = tokens[11]
-	    insertSize = tokens[12]
-	    markerID = tokens[13]
-	    relationship = tokens[14]
-	    sequenceIDs = tokens[15]
-	    notes = tokens[16]
-	    createdBy = tokens[17]
+	    sourceName = tokens[2]
+	    organism = tokens[3]
+	    strain = tokens[4]
+	    tissue = tokens[5]
+	    gender = tokens[6]
+	    cellLine = tokens[7]
+	    age = tokens[8]
+	    vectorType = tokens[9]
+	    segmentType = tokens[10]
+	    regionCovered = tokens[11]
+	    insertSite = tokens[12]
+	    insertSize = tokens[13]
+	    markerID = tokens[14]
+	    relationship = tokens[15]
+	    sequenceIDs = tokens[16]
+	    notes = tokens[17]
+	    createdBy = tokens[18]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
-	organismKey = sourceloadlib.verifyOrganism(organism, lineNum, errorFile)
-	strainKey = sourceloadlib.verifyStrain(strain, lineNum, errorFile)
-	tissueKey = sourceloadlib.verifyTissue(tissue, lineNum, errorFile)
-	genderKey = sourceloadlib.verifyGender(gender, lineNum, errorFile)
-	cellLineKey = sourceloadlib.verifyCellLine(cellLine, lineNum, errorFile)
-	vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
-	segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
+	if sourceName == '':
+	    organismKey = sourceloadlib.verifyOrganism(organism, lineNum, errorFile)
+	    strainKey = sourceloadlib.verifyStrain(strain, lineNum, errorFile)
+	    tissueKey = sourceloadlib.verifyTissue(tissue, lineNum, errorFile)
+	    genderKey = sourceloadlib.verifyGender(gender, lineNum, errorFile)
+	    cellLineKey = sourceloadlib.verifyCellLine(cellLine, lineNum, errorFile)
+	    vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
+	    segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
+	    sourceKey = sourceloadlib.verifySource(segmentTypeKey, vectorKey, organismKey, strainKey, tissueKey, genderKey, cellLineKey, age, lineNum, errorFile)
+
+	    if organismKey == 0 or strainKey == 0 or tissueKey == 0 or \
+               genderKey == 0 or cellLineKey == 0 or vectorKey == 0 or \
+               segmentTypeKey == 0 or sourceKey == 0:
+	        error = 1
+
+	else:
+	    vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
+	    segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
+	    sourceKey = sourceloadlib.verifyLibrary(sourceName, lineNum, errorFile)
+
+	    if vectorKey == 0 or segmentTypeKey == 0 or sourceKey == 0:
+	        error = 1
+
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
 	markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
 	userKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	sourceKey = sourceloadlib.verifySource(segmentTypeKey, vectorKey, organismKey, strainKey, tissueKey, genderKey, cellLineKey, age, lineNum, errorFile)
+	if referenceKey == 0 or markerKey == 0 or userKey == 0:
+	    error = 1
 
 	# sequence IDs
 	seqAccDict = {}
@@ -438,12 +457,6 @@ def processFile():
 	        logicalDBKey = loadlib.verifyLogicalDB(logicalDB, lineNum, errorFile)
 	        if logicalDBKey > 0:
 		    seqAccDict[acc] = logicalDBKey
-
-        if organismKey == 0 or strainKey == 0 or tissueKey == 0 or genderKey == 0 \
-	   or cellLineKey == 0 or vectorKey == 0 or segmentTypeKey == 0 \
-	   or markerKey == 0 or referenceKey == 0 or userKey == 0 or sourceKey == 0:
-            # set error flag to true
-            error = 1
 
         # if errors, continue to next record
         if error:
@@ -514,6 +527,12 @@ bcpFiles()
 exit(0)
 
 # $Log$
+# Revision 1.2.2.1  2005/08/18 14:21:19  dbm
+# Changed for TR 6739
+#
+# Revision 1.2  2004/11/30 17:07:54  lec
+# probeload-2-0-0
+#
 # Revision 1.1  2004/09/08 19:33:29  lec
 # TR 6118
 #
