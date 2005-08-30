@@ -379,7 +379,9 @@ def processFile():
 	        [logicalDB, acc] = string.split(seqID, ':')
 	        logicalDBKey = loadlib.verifyLogicalDB(logicalDB, lineNum, errorFile)
 	        if logicalDBKey > 0:
-		    seqAccDict[acc] = logicalDBKey
+		    if not seqAccDict.has_key(acc):
+			seqAccDict[acc] = []
+		    seqAccDict[acc].append(logicalDBKey)
 
         if vectorKey == 0 or segmentTypeKey == 0 \
 	   or referenceKey == 0 or userKey == 0 or libraryKey == 0:
@@ -409,11 +411,13 @@ def processFile():
 	# sequence accession ids
 	for acc in seqAccDict.keys():
 	    prefixPart, numericPart = accessionlib.split_accnum(acc)
-            accFile.write('%s|%s|%s|%s|%s|%d|%d|0|1|%s|%s|%s|%s\n' \
-                % (accKey, acc, prefixPart, numericPart, seqAccDict[acc], probeKey, mgiTypeKey, userKey, userKey, loaddate, loaddate))
-            accRefFile.write('%s|%s|%s|%s|%s|%s\n' \
-                % (accKey, referenceKey, userKey, userKey, loaddate, loaddate))
-	    accKey = accKey + 1
+
+	    for logicalDB in seqAccDict[acc]:
+                accFile.write('%s|%s|%s|%s|%s|%d|%d|0|1|%s|%s|%s|%s\n' \
+                    % (accKey, acc, prefixPart, numericPart, logicalDB, probeKey, mgiTypeKey, userKey, userKey, loaddate, loaddate))
+                accRefFile.write('%s|%s|%s|%s|%s|%s\n' \
+                    % (accKey, referenceKey, userKey, userKey, loaddate, loaddate))
+	        accKey = accKey + 1
 
 	refKey = refKey + 1
         probeKey = probeKey + 1
