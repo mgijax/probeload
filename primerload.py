@@ -204,9 +204,8 @@ def init():
     db.set_sqlLogFD(diagFile)
 
     diagFile.write('Start Date/Time: %s\n' % (mgi_utils.date()))
-    diagFile.write('Server: %s\n' % (server))
-    diagFile.write('Database: %s\n' % (database))
-    diagFile.write('User: %s\n' % (user))
+    diagFile.write('Server: %s\n' % (db.get_sqlServer))
+    diagFile.write('Database: %s\n' % (db.get_sqlDatabase()))
 
     errorFile.write('Start Date/Time: %s\n\n' % (mgi_utils.date()))
 
