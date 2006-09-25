@@ -1,8 +1,5 @@
 #!/usr/local/bin/python
 
-# $Header$
-# $Name$
-
 #
 # Program: probeload.py
 #
@@ -21,13 +18,7 @@
 # Requirements Satisfied by This Program:
 #
 # Usage:
-#	program.py
-#	-S = database server
-#	-D = database
-#	-U = user
-#	-P = password file
-#	-M = mode
-#	-I = input file
+#	probeload.py
 #
 # Envvars:
 #
@@ -82,7 +73,6 @@
 import sys
 import os
 import string
-import getopt
 import accessionlib
 import db
 import mgi_utils
@@ -90,6 +80,13 @@ import loadlib
 import sourceloadlib
 
 #globals
+
+#
+# from configuration file
+#
+passwordFileName = os.environ['MGI_DBPASSWORDFILE']
+mode = os.environ['LOADMODE']
+inputFileName = os.environ['PROBELOADINPUT']
 
 DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab
@@ -123,9 +120,7 @@ noteFileName = noteTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
-passwordFileName = ''	# password file name
 
-mode = ''		# processing mode (load, preview)
 probeKey = 0            # PRB_Probe._Probe_key
 refKey = 0		# PRB_Reference._Reference_key
 accKey = 0              # ACC_Accession._Accession_key
@@ -140,21 +135,6 @@ markerDict = {}      	# dictionary of markers for quick lookup
 
 loaddate = loadlib.loaddate
 
-# Purpose: displays correct usage of this program
-# Returns: nothing
-# Assumes: nothing
-# Effects: exits with status of 1
-# Throws: nothing
- 
-def showUsage():
-    usage = 'usage: %s -S server\n' % sys.argv[0] + \
-        '-D database\n' + \
-        '-U user\n' + \
-        '-P password file\n' + \
-        '-M mode\n'
-
-    exit(1, usage)
- 
 # Purpose: prints error message and exits
 # Returns: nothing
 # Assumes: nothing
@@ -185,57 +165,18 @@ def exit(
 # Returns: nothing
 # Assumes: nothing
 # Effects: initializes global variables
-#          calls showUsage() if usage error
 #          exits if files cannot be opened
 # Throws: nothing
 
 def init():
-    global diagFile, errorFile, inputFile, errorFileName, diagFileName, passwordFileName
-    global mode
+    global diagFile, errorFile, inputFile, errorFileName, diagFileName
     global probeFile, markerFile, refFile, accFile, accRefFile, noteFile
  
-    try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'S:D:U:P:M:I:')
-    except:
-        showUsage()
- 
-    #
-    # Set server, database, user, passwords depending on options specified
-    #
- 
-    server = ''
-    database = ''
-    user = ''
-    password = ''
- 
-    for opt in optlist:
-        if opt[0] == '-S':
-            server = opt[1]
-        elif opt[0] == '-D':
-            database = opt[1]
-        elif opt[0] == '-U':
-            user = opt[1]
-        elif opt[0] == '-P':
-            passwordFileName = opt[1]
-        elif opt[0] == '-M':
-            mode = opt[1]
-        elif opt[0] == '-I':
-            inputFileName = opt[1]
-        else:
-            showUsage()
-
-    # User must specify Server, Database, User and Password
-    password = string.strip(open(passwordFileName, 'r').readline())
-    if server == '' or database == '' or user == '' or password == '' \
-	or mode == '' or inputFileName == '':
-        showUsage()
-
-    # Initialize db.py DBMS parameters
-    db.set_sqlLogin(user, password, server, database)
     db.useOneConnection(1)
  
     fdate = mgi_utils.date('%m%d%Y')	# current date
     head, tail = os.path.split(inputFileName) 
+
     diagFileName = tail + '.' + fdate + '.diagnostics'
     errorFileName = tail + '.' + fdate + '.error'
 
@@ -526,13 +467,3 @@ processFile()
 bcpFiles()
 exit(0)
 
-# $Log$
-# Revision 1.2.2.1  2005/08/18 14:21:19  dbm
-# Changed for TR 6739
-#
-# Revision 1.2  2004/11/30 17:07:54  lec
-# probeload-2-0-0
-#
-# Revision 1.1  2004/09/08 19:33:29  lec
-# TR 6118
-#

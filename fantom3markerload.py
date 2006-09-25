@@ -14,13 +14,7 @@
 # Requirements Satisfied by This Program:
 #
 # Usage:
-#	program.py
-#	-S = database server
-#	-D = database
-#	-U = user
-#	-P = password file
-#	-M = mode
-#	-I = input file
+#	fantom3loadmarker.py
 #
 # Envvars:
 #
@@ -60,6 +54,13 @@ import loadlib
 
 #globals
 
+#
+# from configuration file
+#
+passwordFileName = os.environ['MGI_DBPASSWORDFILE']
+mode = os.environ['LOADMODE']
+inputFileName = os.environ['PROBELOADINPUT']
+
 DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab
 CRT = '\n'		# carriage return/newline
@@ -80,28 +81,11 @@ probeFileName = probeTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
-passwordFileName = ''	# password file name
 
-mode = ''		# processing mode (load, preview)
 probeKey = 0            # PRB_Probe._Probe_key
 
 loaddate = loadlib.loaddate
 
-# Purpose: displays correct usage of this program
-# Returns: nothing
-# Assumes: nothing
-# Effects: exits with status of 1
-# Throws: nothing
- 
-def showUsage():
-    usage = 'usage: %s -S server\n' % sys.argv[0] + \
-        '-D database\n' + \
-        '-U user\n' + \
-        '-P password file\n' + \
-        '-M mode\n'
-
-    exit(1, usage)
- 
 # Purpose: prints error message and exits
 # Returns: nothing
 # Assumes: nothing
@@ -132,53 +116,13 @@ def exit(
 # Returns: nothing
 # Assumes: nothing
 # Effects: initializes global variables
-#          calls showUsage() if usage error
 #          exits if files cannot be opened
 # Throws: nothing
 
 def init():
-    global diagFile, errorFile, inputFile, errorFileName, diagFileName, passwordFileName
-    global mode
+    global diagFile, errorFile, inputFile, errorFileName, diagFileName
     global probeFile
  
-    try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'S:D:U:P:M:I:')
-    except:
-        showUsage()
- 
-    #
-    # Set server, database, user, passwords depending on options specified
-    #
- 
-    server = ''
-    database = ''
-    user = ''
-    password = ''
- 
-    for opt in optlist:
-        if opt[0] == '-S':
-            server = opt[1]
-        elif opt[0] == '-D':
-            database = opt[1]
-        elif opt[0] == '-U':
-            user = opt[1]
-        elif opt[0] == '-P':
-            passwordFileName = opt[1]
-        elif opt[0] == '-M':
-            mode = opt[1]
-        elif opt[0] == '-I':
-            inputFileName = opt[1]
-        else:
-            showUsage()
-
-    # User must specify Server, Database, User and Password
-    password = string.strip(open(passwordFileName, 'r').readline())
-    if server == '' or database == '' or user == '' or password == '' \
-	or mode == '' or inputFileName == '':
-        showUsage()
-
-    # Initialize db.py DBMS parameters
-    db.set_sqlLogin(user, password, server, database)
     db.useOneConnection(1)
  
     fdate = mgi_utils.date('%m%d%Y')	# current date
