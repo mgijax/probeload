@@ -84,7 +84,8 @@ import sourceloadlib
 #
 # from configuration file
 #
-passwordFileName = os.environ['MGI_DBPASSWORDFILE']
+user = os.environ['MGD_DBUSER']
+passwordFileName = os.environ['MGD_DBPASSWORDFILE']
 mode = os.environ['LOADMODE']
 inputFileName = os.environ['PROBELOADINPUT']
 
@@ -173,6 +174,8 @@ def init():
     global probeFile, markerFile, refFile, accFile, accRefFile, noteFile
  
     db.useOneConnection(1)
+    db.set_sqlUser(user)
+    db.set_sqlPassword(passwordFileName)
  
     fdate = mgi_utils.date('%m%d%Y')	# current date
     head, tail = os.path.split(inputFileName) 
