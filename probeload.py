@@ -387,9 +387,9 @@ def processFile():
 
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
 	markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
-	userKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	if referenceKey == 0 or markerKey == 0 or userKey == 0:
+	if referenceKey == 0 or markerKey == 0 or createdByKey == 0:
 	    error = 1
 
 	# sequence IDs
@@ -410,16 +410,16 @@ def processFile():
 
         probeFile.write('%d|%s||%s|%s|%s|||%s|%s|%s||%s|%s|%s|%s\n' \
             % (probeKey, name, sourceKey, vectorKey, segmentTypeKey, mgi_utils.prvalue(regionCovered), \
-	    mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), userKey, userKey, loaddate, loaddate))
+	    mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), createdByKey, createdByKey, loaddate, loaddate))
 
-        markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' % (probeKey, markerKey, referenceKey, relationship, userKey, userKey, loaddate, loaddate))
+        markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
 
-        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' % (refKey, probeKey, referenceKey, userKey, userKey, loaddate, loaddate))
+        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # MGI Accession ID for the marker
 
         accFile.write('%s|%s%d|%s|%s|1|%d|%d|0|1|%s|%s|%s|%s\n' \
-            % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, probeKey, mgiTypeKey, userKey, userKey, loaddate, loaddate))
+            % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
 
 	# Notes
 
@@ -441,9 +441,9 @@ def processFile():
 	for acc in seqAccDict.keys():
 	    prefixPart, numericPart = accessionlib.split_accnum(acc)
             accFile.write('%s|%s|%s|%s|%s|%d|%d|0|1|%s|%s|%s|%s\n' \
-                % (accKey, acc, prefixPart, numericPart, seqAccDict[acc], probeKey, mgiTypeKey, userKey, userKey, loaddate, loaddate))
+                % (accKey, acc, prefixPart, numericPart, seqAccDict[acc], probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
             accRefFile.write('%s|%s|%s|%s|%s|%s\n' \
-                % (accKey, referenceKey, userKey, userKey, loaddate, loaddate))
+                % (accKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 	    accKey = accKey + 1
 
 	refKey = refKey + 1
