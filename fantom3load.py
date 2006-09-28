@@ -316,7 +316,7 @@ def processFile():
 
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
 	libraryKey = sourceloadlib.verifyLibrary(library, lineNum, errorFile)
-	userKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
 	# sequence IDs
 	seqAccDict = {}
@@ -330,7 +330,7 @@ def processFile():
 		    seqAccDict[acc].append(logicalDBKey)
 
         if vectorKey == 0 or segmentTypeKey == 0 \
-	   or referenceKey == 0 or userKey == 0 or libraryKey == 0:
+	   or referenceKey == 0 or createdByKey == 0 or libraryKey == 0:
             # set error flag to true
             error = 1
 
@@ -342,15 +342,15 @@ def processFile():
 
         probeFile.write('%d|%s||%s|%s|%s|||%s|%s|%s||%s|%s|%s|%s\n' \
             % (probeKey, name, libraryKey, vectorKey, segmentTypeKey, mgi_utils.prvalue(regionCovered), \
-	    mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), userKey, userKey, loaddate, loaddate))
+	    mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), createdByKey, createdByKey, loaddate, loaddate))
 
-        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' % (refKey, probeKey, referenceKey, userKey, userKey, loaddate, loaddate))
+        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # MGI Accession ID of clone
 	prefixPart, numericPart = accessionlib.split_accnum(mgiID)
 
         accFile.write('%s|%s|%s|%s|1|%d|%d|0|1|%s|%s|%s|%s\n' \
-            % (accKey, mgiID, prefixPart, numericPart, probeKey, mgiTypeKey, userKey, userKey, loaddate, loaddate))
+            % (accKey, mgiID, prefixPart, numericPart, probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
 
         accKey = accKey + 1
 
@@ -360,9 +360,9 @@ def processFile():
 
 	    for logicalDB in seqAccDict[acc]:
                 accFile.write('%s|%s|%s|%s|%s|%d|%d|0|1|%s|%s|%s|%s\n' \
-                    % (accKey, acc, prefixPart, numericPart, logicalDB, probeKey, mgiTypeKey, userKey, userKey, loaddate, loaddate))
+                    % (accKey, acc, prefixPart, numericPart, logicalDB, probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
                 accRefFile.write('%s|%s|%s|%s|%s|%s\n' \
-                    % (accKey, referenceKey, userKey, userKey, loaddate, loaddate))
+                    % (accKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 	        accKey = accKey + 1
 
 	refKey = refKey + 1

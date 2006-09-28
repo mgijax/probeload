@@ -219,7 +219,7 @@ def processFile():
     lineNum = 0
 
     referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
-    userKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+    createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
     # For each line in the input file
 
@@ -242,7 +242,7 @@ def processFile():
 	for cloneID in string.split(cloneIDs, ','):
 	    cloneKey = loadlib.verifyObject(cloneID, '3', None, lineNum, errorFile)
 
-            if referenceKey == 0 or userKey == 0 or markerKey == 0 or cloneKey == 0:
+            if referenceKey == 0 or createdByKey == 0 or markerKey == 0 or cloneKey == 0:
                 # set error flag to true
                 error = 1
 
@@ -253,7 +253,7 @@ def processFile():
             # if no errors, process the probe
 
             probeFile.write('%d|%d|%d|%s|%s|%s|%s|%s\n' \
-                % (cloneKey, markerKey, referenceKey, relationship, userKey, userKey, loaddate, loaddate))
+                % (cloneKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
 
     #	end of "for line in inputFile.readlines():"
 
