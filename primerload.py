@@ -78,6 +78,7 @@ user = os.environ['MGD_DBUSER']
 passwordFileName = os.environ['MGD_DBPASSWORDFILE']
 mode = os.environ['PRIMERMODE']
 inputFileName = os.environ['PRIMERDATAFILE']
+outputDir = os.environ['OUTPUTDIR']
 
 DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab
@@ -102,12 +103,12 @@ accTable = 'ACC_Accession'
 accRefTable = 'ACC_AccessionReference'
 noteTable = 'PRB_Notes'
 
-primerFileName = primerTable + '.bcp'
-markerFileName = markerTable + '.bcp'
-refFileName = refTable + '.bcp'
-accFileName = accTable + '.bcp'
-accRefFileName = accRefTable + '.bcp'
-noteFileName = noteTable + '.bcp'
+primerFileName = outputDir + '/' + primerTable + '.bcp'
+markerFileName = outputDir + '/' + markerTable + '.bcp'
+refFileName = outputDir + '/' + refTable + '.bcp'
+accFileName = outputDir + '/' + accTable + '.bcp'
+accRefFileName = outputDir + '/' + accRefTable + '.bcp'
+noteFileName = outputDir + '/' + noteTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -175,8 +176,8 @@ def init():
     fdate = mgi_utils.date('%m%d%Y')	# current date
     head, tail = os.path.split(inputFileName) 
 
-    diagFileName = tail + '.' + fdate + '.diagnostics'
-    errorFileName = tail + '.' + fdate + '.error'
+    diagFileName = outputDir + '/' + tail + '.' + fdate + '.diagnostics'
+    errorFileName = outputDir + '/' + tail + '.' + fdate + '.error'
 
     try:
         diagFile = open(diagFileName, 'w')

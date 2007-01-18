@@ -10,8 +10,6 @@ setenv CONFIGFILE $1
 
 source ${CONFIGFILE}
 
-cd ${PRIMERDATADIR}
-
 rm -rf ${PRIMERLOG}
 touch ${PRIMERLOG}
 
