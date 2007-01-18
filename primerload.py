@@ -13,6 +13,7 @@
 #	PRB_Marker
 #	PRB_Reference
 #	ACC_Accession
+#	PRB_Notes
 #
 # Requirements Satisfied by This Program:
 #
@@ -24,24 +25,27 @@
 # Inputs:
 #
 #	A tab-delimited file in the format:
-#		field 1: MGI Marker Accession ID
-#		field 2: Primer Name
-#		field 3: Reference (J:#####)
-#		field 4: Region Covered
-#		field 5: Sequence 1
-#		field 6: Sequence 2
-#		field 7: Repeat Unit
-#		field 8: More Than One Product (y/n)
-#		field 9: Product Size
+#		field 1: Marker Symbol
+#		field 2: MGI Marker Accession ID
+#		field 3: Primer Name
+#		field 4: Reference (J:#####)
+#		field 5: Region Covered
+#		field 6: Sequence 1
+#		field 7: Sequence 2
+#		field 8: Product Size
+#		field 9: Notes
+#               field 10: Nucleotide Sequence ID   (|-delimited)
+#               field 11: Created By
 #
 # Outputs:
 #
-#       4 BCP files:
+#       5 BCP files:
 #
 #       PRB_Probe.bcp                   master Primer records
 #	PRB_Marker.bcp			Primer/Marker records
 #       PRB_Reference.bcp         	Primer Reference records
 #       ACC_Accession.bcp               Accession records
+#	PRB_Notes.bcp			Primer Notes
 #
 #       Diagnostics file of all input parameters and SQL commands
 #       Error file
@@ -63,6 +67,7 @@ import string
 import db
 import mgi_utils
 import accessionlib
+import loadlib
 
 #globals
 
@@ -71,8 +76,8 @@ import accessionlib
 #
 user = os.environ['MGD_DBUSER']
 passwordFileName = os.environ['MGD_DBPASSWORDFILE']
-mode = os.environ['LOADMODE']
-inputFileName = os.environ['PROBELOADINPUT']
+mode = os.environ['PRIMERMODE']
+inputFileName = os.environ['PRIMERDATAFILE']
 
 DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab
@@ -87,16 +92,22 @@ primerFile = ''         # file descriptor
 markerFile = ''		# file descriptor
 refFile = ''            # file descriptor
 accFile = ''            # file descriptor
+accRefFile = ''         # file descriptor
+noteFile = ''		# file descriptor
 
 primerTable = 'PRB_Probe'
 markerTable = 'PRB_Marker'
 refTable = 'PRB_Reference'
 accTable = 'ACC_Accession'
+accRefTable = 'ACC_AccessionReference'
+noteTable = 'PRB_Notes'
 
 primerFileName = primerTable + '.bcp'
 markerFileName = markerTable + '.bcp'
 refFileName = refTable + '.bcp'
 accFileName = accTable + '.bcp'
+accRefFileName = accRefTable + '.bcp'
+noteFileName = noteTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -106,16 +117,18 @@ refKey = 0		# PRB_Reference._Reference_key
 accKey = 0              # ACC_Accession._Accession_key
 mgiKey = 0              # ACC_AccessionMax.maxNumericPart
 
-dnaType = 'primer'	# PRB_Probe.DNAtype
+segmentTypeKey = 63473	# PRB_Probe._SegmentType_key
+vectorKey = 316369	# PRB_Probe._Vector_key
 relationship = 'A'	# PRB_Marker.relationship
 NA = -2			# for Not Applicable fields
 mgiTypeKey = 3		# Molecular Segment
 mgiPrefix = "MGI:"
+logicalDBKey = 9	# Logical DB for Nucleotide Sequences
 
 referenceDict = {}      # dictionary of references for quick lookup
 markerDict = {}      	# dictionary of markers for quick lookup
 
-cdate = mgi_utils.date('%m/%d/%Y')	# current date
+loaddate = loadlib.loaddate
 
 # Purpose: prints error message and exits
 # Returns: nothing
@@ -153,7 +166,7 @@ def exit(
 
 def init():
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
-    global primerFile, markerFile, refFile, accFile
+    global primerFile, markerFile, refFile, accFile, accRefFile, noteFile
  
     db.useOneConnection(1)
     db.set_sqlUser(user)
@@ -200,6 +213,16 @@ def init():
     except:
         exit(1, 'Could not open file %s\n' % accFileName)
 
+    try:
+        accRefFile = open(accRefFileName, 'w')
+    except:
+        exit(1, 'Could not open file %s\n' % accRefFileName)
+
+    try:
+        noteFile = open(noteFileName, 'w')
+    except:
+        exit(1, 'Could not open file %s\n' % noteFileName)
+
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
 
@@ -230,68 +253,6 @@ def verifyMode():
         bcpon = 0
     elif mode != 'load':
         exit(1, 'Invalid Processing Mode:  %s\n' % (mode))
-
-
-# Purpose:  verify Marker Accession ID
-# Returns:  Marker Key if Marker is valid, else 0
-# Assumes:  nothing
-# Effects:  verifies that the Marker exists either in the marker dictionary or the database
-#	writes to the error file if the Marker is invalid
-#	adds the marker id and key to the marker dictionary if the Marker is valid
-# Throws:  nothing
-
-def verifyMarker(
-    markerID, 	# Accession ID of the Marker (string)
-    lineNum	# line number (integer)
-    ):
-
-    global markerDict
-
-    markerKey = 0
-
-    if markerDict.has_key(markerID):
-        errorFile.write('Duplicate Mouse Marker (%d) %s\n' % (lineNum, markerID))
-    else:
-        results = db.sql('select _Object_key from MRK_Acc_View where accID = "%s" ' % (markerID), 'auto')
-
-        for r in results:
-            if r['_Object_key'] is None:
-                errorFile.write('Invalid Mouse Marker (%d) %s\n' % (lineNum, markerID))
-                markerKey = 0
-            else:
-                markerKey = r['_Object_key']
-                markerDict[markerID] = markerKey
-
-    return markerKey
-
-# Purpose:  verifies the input reference (J:)
-# Returns:  the primary key of the reference or 0 if invalid
-# Assumes:  nothing
-# Effects:  verifies that the Reference exists by checking the referenceDict
-#	dictionary for the reference ID or the database.
-#	writes to the error file if the Reference is invalid.
-#	adds the Reference ID/Key to the global referenceDict dictionary if the
-#	reference is valid.
-# Throws:
-
-def verifyReference(
-    referenceID,          # reference accession ID; J:#### (string)
-    lineNum		  # line number (integer)
-    ):
-
-    global referenceDict
-
-    if referenceDict.has_key(referenceID):
-        referenceKey = referenceDict[referenceID]
-    else:
-        referenceKey = accessionlib.get_Object_key(referenceID, 'Reference')
-        if referenceKey is None:
-            errorFile.write('Invalid Reference (%d): %s\n' % (lineNum, referenceID))
-            referenceKey = 0
-        else:
-            referenceDict[referenceID] = referenceKey
-
-    return(referenceKey)
 
 # Purpose:  sets global primary key variables
 # Returns:  nothing
@@ -333,6 +294,8 @@ def bcpFiles():
     markerFile.close()
     refFile.close()
     accFile.close()
+    accRefFile.close()
+    noteFile.close()
 
     bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
     bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
@@ -342,11 +305,13 @@ def bcpFiles():
     bcp2 = '%s%s in %s %s' % (bcpI, markerTable, markerFileName, bcpII)
     bcp3 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
     bcp4 = '%s%s in %s %s' % (bcpI, accTable, accFileName, bcpII)
+    bcp5 = '%s%s in %s %s' % (bcpI, accRefTable, accRefFileName, bcpII)
+    bcp6 = '%s%s in %s %s' % (bcpI, noteTable, noteFileName, bcpII)
 
-    for bcpCmd in [bcp1, bcp2, bcp3, bcp4]:
+    for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
-	db.sql(truncateDB, None)
+#	db.sql(truncateDB, None)
 
     return
 
@@ -372,29 +337,30 @@ def processFile():
         tokens = string.split(line[:-1], '\t')
 
         try:
-	    markerID = tokens[0]
-	    name = tokens[1]
-	    jnum = tokens[2]
-	    regionCovered = tokens[3]
-	    sequence1 = tokens[4]
-	    sequence2 = tokens[5]
-	    repeatUnit = tokens[6]
-	    moreProduct = tokens[7]
-	    productSize = tokens[8]
+	    markerSymbol = tokens[0]	# not used
+	    markerID = tokens[1]
+	    name = tokens[2]
+	    jnum = tokens[3]
+	    regionCovered = tokens[4]
+	    sequence1 = tokens[5]
+	    sequence2 = tokens[6]
+	    productSize = tokens[7]
+	    notes = tokens[8]
+	    sequenceIDs = tokens[9]
+	    createdBy = tokens[10]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
-	markerKey = verifyMarker(markerID, lineNum)
-        referenceKey = verifyReference(jnum, lineNum)
-
-	if moreProduct == 'y':
-		moreProduct = '1'
-	else:
-		moreProduct = '0'
+	markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
+        referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
+	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
         if markerKey == 0 or referenceKey == 0:
             # set error flag to true
             error = 1
+
+	# sequence IDs
+	seqAccList = string.split(sequenceIDs, '|')
 
         # if errors, continue to next record
         if error:
@@ -402,21 +368,43 @@ def processFile():
 
         # if no errors, process the primer
 
-        primerFile.write('%d|%s||%d|%d|%s|%s|%s||||%s|%s|%s|%s|%s|%s\n' \
-            % (primerKey, name, NA, NA, sequence1, sequence2, mgi_utils.prvalue(regionCovered), \
-	    dnaType, mgi_utils.prvalue(repeatUnit), mgi_utils.prvalue(productSize), moreProduct, cdate, cdate))
+        primerFile.write('%d|%s||%d|%d|%s|%s|%s|%s|||%s|%s|%s|%s|%s\n' \
+            % (primerKey, name, NA, vectorKey, segmentTypeKey, mgi_utils.prvalue(sequence1), \
+	    mgi_utils.prvalue(sequence2), mgi_utils.prvalue(regionCovered), mgi_utils.prvalue(productSize), \
+	    createdByKey, createdByKey, loaddate, loaddate))
 
-        markerFile.write('%d|%d|%s|%s|%s\n' % (primerKey, markerKey, relationship, cdate, cdate))
+        markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' % (primerKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate,
+	 loaddate))
 
-        refFile.write('%d|%d|%d|0|0|%s|%s\n' % (refKey, primerKey, referenceKey, cdate, cdate))
+        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' % (refKey, primerKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # MGI Accession ID for the marker
 
-        accFile.write('%d|%s%d|%s|%s|1|%d|%d|0|1|%s|%s|%s\n' \
-            % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, primerKey, mgiTypeKey, cdate, cdate, cdate))
+        accFile.write('%s|%s%d|%s|%s|1|%d|%d|0|1|%s|%s|%s|%s\n' \
+            % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, primerKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
 
         accKey = accKey + 1
         mgiKey = mgiKey + 1
+
+	# sequence accession ids
+	for acc in seqAccList:
+
+	    if len(acc) == 0:
+		continue
+
+	    prefixPart, numericPart = accessionlib.split_accnum(acc)
+            accFile.write('%s|%s|%s|%s|%s|%d|%d|0|1|%s|%s|%s|%s\n' \
+                % (accKey, acc, prefixPart, numericPart, logicalDBKey, primerKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
+            accRefFile.write('%s|%s|%s|%s|%s|%s\n' \
+                % (accKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+	    accKey = accKey + 1
+
+	# notes
+
+	if len(notes) > 0:
+	   noteFile.write('%s|1|%s|%s|%s\n' \
+		% (primerKey, notes, loaddate, loaddate))
+
 	refKey = refKey + 1
         primerKey = primerKey + 1
 
