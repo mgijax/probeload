@@ -14,6 +14,7 @@
 #	PRB_Reference
 #	ACC_Accession
 #	ACC_AccessionReference
+#	PRB_Notes
 #
 # Requirements Satisfied by This Program:
 #
@@ -86,8 +87,9 @@ import sourceloadlib
 #
 user = os.environ['MGD_DBUSER']
 passwordFileName = os.environ['MGD_DBPASSWORDFILE']
-mode = os.environ['LOADMODE']
-inputFileName = os.environ['PROBELOADINPUT']
+mode = os.environ['PROBELOADMODE']
+inputFileName = os.environ['PROBEDATAFILE']
+outputDir = os.environ['PROBELOADDATADIR']
 
 DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab
@@ -112,12 +114,12 @@ accTable = 'ACC_Accession'
 accRefTable = 'ACC_AccessionReference'
 noteTable = 'PRB_Notes'
 
-probeFileName = probeTable + '.bcp'
-markerFileName = markerTable + '.bcp'
-refFileName = refTable + '.bcp'
-accFileName = accTable + '.bcp'
-accRefFileName = accRefTable + '.bcp'
-noteFileName = noteTable + '.bcp'
+probeFileName = outputDir + '/' + probeTable + '.bcp'
+markerFileName = outputDir + '/' + markerTable + '.bcp'
+refFileName = outputDir + '/' + refTable + '.bcp'
+accFileName = outputDir + '/' + accTable + '.bcp'
+accRefFileName = outputDir + '/' + accRefTable + '.bcp'
+noteFileName = outputDir + '/' + noteTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -177,11 +179,10 @@ def init():
     db.set_sqlUser(user)
     db.set_sqlPasswordFromFile(passwordFileName)
  
-    fdate = mgi_utils.date('%m%d%Y')	# current date
     head, tail = os.path.split(inputFileName) 
 
-    diagFileName = tail + '.' + fdate + '.diagnostics'
-    errorFileName = tail + '.' + fdate + '.error'
+    diagFileName = outputDir + '/' + tail + '.diagnostics'
+    errorFileName = outputDir + '/' + tail + '.error'
 
     try:
         diagFile = open(diagFileName, 'w')

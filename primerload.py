@@ -13,6 +13,7 @@
 #	PRB_Marker
 #	PRB_Reference
 #	ACC_Accession
+#	ACC_AccessionReference
 #	PRB_Notes
 #
 # Requirements Satisfied by This Program:
@@ -39,12 +40,13 @@
 #
 # Outputs:
 #
-#       5 BCP files:
+#       6 BCP files:
 #
 #       PRB_Probe.bcp                   master Primer records
 #	PRB_Marker.bcp			Primer/Marker records
 #       PRB_Reference.bcp         	Primer Reference records
 #       ACC_Accession.bcp               Accession records
+#       ACC_AccessionReference.bcp      Accession Reference records
 #	PRB_Notes.bcp			Primer Notes
 #
 #       Diagnostics file of all input parameters and SQL commands
@@ -76,9 +78,9 @@ import loadlib
 #
 user = os.environ['MGD_DBUSER']
 passwordFileName = os.environ['MGD_DBPASSWORDFILE']
-mode = os.environ['PRIMERMODE']
+mode = os.environ['PRIMERLOADMODE']
 inputFileName = os.environ['PRIMERDATAFILE']
-outputDir = os.environ['OUTPUTDIR']
+outputDir = os.environ['PRIMERLOADDATADIR']
 
 DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab
@@ -173,11 +175,10 @@ def init():
     db.set_sqlUser(user)
     db.set_sqlPasswordFromFile(passwordFileName)
  
-    fdate = mgi_utils.date('%m%d%Y')	# current date
     head, tail = os.path.split(inputFileName) 
 
-    diagFileName = outputDir + '/' + tail + '.' + fdate + '.diagnostics'
-    errorFileName = outputDir + '/' + tail + '.' + fdate + '.error'
+    diagFileName = outputDir + '/' + tail + '.diagnostics'
+    errorFileName = outputDir + '/' + tail + '.error'
 
     try:
         diagFile = open(diagFileName, 'w')
