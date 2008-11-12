@@ -49,6 +49,8 @@
 #       ACC_AccessionReference.bcp      Accession Reference records
 #	PRB_Notes.bcp			Primer Notes
 #
+#	attach MGI ID to input primer file
+#
 #       Diagnostics file of all input parameters and SQL commands
 #       Error file
 #
@@ -104,6 +106,7 @@ refTable = 'PRB_Reference'
 accTable = 'ACC_Accession'
 accRefTable = 'ACC_AccessionReference'
 noteTable = 'PRB_Notes'
+newPrimerFile = 'newPrimer.txt'
 
 primerFileName = outputDir + '/' + primerTable + '.bcp'
 markerFileName = outputDir + '/' + markerTable + '.bcp'
@@ -111,6 +114,7 @@ refFileName = outputDir + '/' + refTable + '.bcp'
 accFileName = outputDir + '/' + accTable + '.bcp'
 accRefFileName = outputDir + '/' + accRefTable + '.bcp'
 noteFileName = outputDir + '/' + noteTable + '.bcp'
+newPrimerFileName = outputDir + '/' + newPrimerFile
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -169,7 +173,7 @@ def exit(
 
 def init():
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
-    global primerFile, markerFile, refFile, accFile, accRefFile, noteFile
+    global primerFile, markerFile, refFile, accFile, accRefFile, noteFile, newPrimerFile
  
     db.useOneConnection(1)
     db.set_sqlUser(user)
@@ -224,6 +228,11 @@ def init():
         noteFile = open(noteFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % noteFileName)
+
+    try:
+        newPrimerFile = open(newPrimerFileName, 'w')
+    except:
+        exit(1, 'Could not open file %s\n' % newPrimerFileName)
 
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
@@ -384,6 +393,9 @@ def processFile():
 
         accFile.write('%s|%s%d|%s|%s|1|%d|%d|0|1|%s|%s|%s|%s\n' \
             % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, primerKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
+
+	newPrimerFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
+	   % (markerSymbol, markerID, name, jnum, regionCovered, sequence1, sequence2, productSize, notes, sequenceIDs, createdBy, mgiPrefix, mgiKey))
 
         accKey = accKey + 1
         mgiKey = mgiKey + 1
