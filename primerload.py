@@ -78,9 +78,9 @@ import loadlib
 #
 user = os.environ['MGD_DBUSER']
 passwordFileName = os.environ['MGD_DBPASSWORDFILE']
-mode = os.environ['PRIMERLOADMODE']
+mode = os.environ['PRIMERMODE']
 inputFileName = os.environ['PRIMERDATAFILE']
-outputDir = os.environ['PRIMERLOADDATADIR']
+outputDir = os.environ['OUTPUTDIR']
 
 DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab

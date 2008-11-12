@@ -1,3 +1,9 @@
+TAG: probeload-4-1-3-1
+DATE: 11/12/2008
+STAFF: lec
+CHANGES:
+1) fix the primerload.py/environment variable names to match config.default
+
 TAG: probeload-3-5-4-1
 DATE: 10/03/2007
 STAFF: dbm
