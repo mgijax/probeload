@@ -7,6 +7,7 @@
 source `dirname $0`/Configuration
 
 setenv PRIMERDIR	/data/loads/mgi/probeload/gxd
+
 setenv LOGDIR		${PRIMERDIR}/logs
 setenv INPUTDIR		${PRIMERDIR}/input
 setenv OUTPUTDIR	${PRIMERDIR}/output
@@ -15,3 +16,6 @@ setenv PRIMERDATAFILE	${INPUTDIR}/TR8099data.txt
 setenv PRIMERLOG	${LOGDIR}/TR8099.data.log
 setenv PRIMERMODE	preview
 
+setenv PROBEDATAFILE	/mgi/all/wts_projects/9400/9417/probes/?
+setenv PROBELOADDATADIR	/mgi/all/wts_projects/9400/9417/probes
+setenv PROBELOADMODE	preview

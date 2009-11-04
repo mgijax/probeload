@@ -70,6 +70,11 @@
 #
 # Implementation:
 #
+# History
+#
+# 11/04/2009	lec
+#	- TR9931;add ability to add multiple markers to PRB_Marker
+#
 
 import sys
 import os
@@ -134,9 +139,6 @@ mgiKey = 0              # ACC_AccessionMax.maxNumericPart
 NA = -2			# for Not Applicable fields
 mgiTypeKey = 3		# Molecular Segment
 mgiPrefix = "MGI:"
-
-referenceDict = {}      # dictionary of references for quick lookup
-markerDict = {}      	# dictionary of markers for quick lookup
 
 loaddate = loadlib.loaddate
 
@@ -362,7 +364,7 @@ def processFile():
 	    regionCovered = tokens[11]
 	    insertSite = tokens[12]
 	    insertSize = tokens[13]
-	    markerID = tokens[14]
+	    markerIDs = string.split(tokens[14], '|')
 	    relationship = tokens[15]
 	    sequenceIDs = tokens[16]
 	    notes = tokens[17]
@@ -378,7 +380,9 @@ def processFile():
 	    cellLineKey = sourceloadlib.verifyCellLine(cellLine, lineNum, errorFile)
 	    vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
 	    segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
-	    sourceKey = sourceloadlib.verifySource(segmentTypeKey, vectorKey, organismKey, strainKey, tissueKey, genderKey, cellLineKey, age, lineNum, errorFile)
+	    sourceKey = sourceloadlib.verifySource(segmentTypeKey, \
+		vectorKey, organismKey, strainKey, \
+		tissueKey, genderKey, cellLineKey, age, lineNum, errorFile)
 
 	    if organismKey == 0 or strainKey == 0 or tissueKey == 0 or \
                genderKey == 0 or cellLineKey == 0 or vectorKey == 0 or \
@@ -394,14 +398,28 @@ def processFile():
 	        error = 1
 
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
-	markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
 	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	if referenceKey == 0 or markerKey == 0 or createdByKey == 0:
+	if referenceKey == 0:
 	    errorFile.write('Invalid Reference:  %s\n' % (jnum))
-	    errorFile.write('Invalid Marker:  %s\n' % (markerID))
-	    errorFile.write('Invalid Creator:  %s\n' % (createdBy))
 	    error = 1
+
+	if createdByKey == 0:
+	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
+	    error = 1
+
+	# marker IDs
+
+	markerList = []
+	for markerID in markerIDs:
+
+	    markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
+
+	    if markerKey == 0:
+	        errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
+	        error = 1
+            else:
+		markerList.append(markerKey)
 
 	# sequence IDs
 	seqAccDict = {}
@@ -416,21 +434,28 @@ def processFile():
         if error:
             continue
 
-
         # if no errors, process the probe
 
         probeFile.write('%d|%s||%s|%s|%s|||%s|%s|%s||%s|%s|%s|%s\n' \
             % (probeKey, name, sourceKey, vectorKey, segmentTypeKey, mgi_utils.prvalue(regionCovered), \
 	    mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), createdByKey, createdByKey, loaddate, loaddate))
 
-        markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
+	for markerKey in markerList:
+	    if markerList.count(markerKey) == 1:
+                markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
+		    % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
+            else:
+		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
-        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
+		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # MGI Accession ID for the marker
 
         accFile.write('%s|%s%d|%s|%s|1|%d|%d|0|1|%s|%s|%s|%s\n' \
             % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
+
+	# Print out a new text file and attach the new MGI Probe IDs as the last field
 
         newProbeFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
 	    % (name, jnum, \
