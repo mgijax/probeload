@@ -113,6 +113,7 @@ refTable = 'PRB_Reference'
 accTable = 'ACC_Accession'
 accRefTable = 'ACC_AccessionReference'
 noteTable = 'PRB_Notes'
+newProbeFile = 'newProbe.txt'
 
 probeFileName = outputDir + '/' + probeTable + '.bcp'
 markerFileName = outputDir + '/' + markerTable + '.bcp'
@@ -120,6 +121,7 @@ refFileName = outputDir + '/' + refTable + '.bcp'
 accFileName = outputDir + '/' + accTable + '.bcp'
 accRefFileName = outputDir + '/' + accRefTable + '.bcp'
 noteFileName = outputDir + '/' + noteTable + '.bcp'
+newProbeFileName = outputDir + '/' + newProbeFile
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -173,7 +175,7 @@ def exit(
 
 def init():
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
-    global probeFile, markerFile, refFile, accFile, accRefFile, noteFile
+    global probeFile, markerFile, refFile, accFile, accRefFile, noteFile, newProbeFile
  
     db.useOneConnection(1)
     db.set_sqlUser(user)
@@ -228,6 +230,11 @@ def init():
         noteFile = open(noteFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % noteFileName)
+
+    try:
+        newProbeFile = open(newProbeFileName, 'w')
+    except:
+        exit(1, 'Could not open file %s\n' % newProbeFileName)
 
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
@@ -391,6 +398,9 @@ def processFile():
 	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
 	if referenceKey == 0 or markerKey == 0 or createdByKey == 0:
+	    errorFile.write('Invalid Reference:  %s\n' % (jnum))
+	    errorFile.write('Invalid Marker:  %s\n' % (markerID))
+	    errorFile.write('Invalid Creator:  %s\n' % (createdBy))
 	    error = 1
 
 	# sequence IDs
@@ -421,6 +431,26 @@ def processFile():
 
         accFile.write('%s|%s%d|%s|%s|1|%d|%d|0|1|%s|%s|%s|%s\n' \
             % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
+
+        newProbeFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
+	    % (name, jnum, \
+	    mgi_utils.prvalue(sourceName), \
+	    organism, \
+	    mgi_utils.prvalue(strain), \
+	    mgi_utils.prvalue(tissue), \
+	    mgi_utils.prvalue(gender), \
+	    mgi_utils.prvalue(cellLine), \
+	    mgi_utils.prvalue(age), \
+	    mgi_utils.prvalue(vectorType), \
+	    mgi_utils.prvalue(segmentType), \
+	    mgi_utils.prvalue(regionCovered) + \
+	    mgi_utils.prvalue(insertSite), \
+	    mgi_utils.prvalue(insertSize), \
+	    markerID, \
+	    relationship, \
+	    mgi_utils.prvalue(sequenceIDs), \
+	    mgi_utils.prvalue(notes), \
+	    createdBy, mgiPrefix, mgiKey))
 
 	# Notes
 
