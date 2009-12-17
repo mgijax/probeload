@@ -7,7 +7,7 @@
 #
 # Purpose:
 #
-#	To load new Probes information into:
+#	To load new Probe/Reference/Alias into:
 #
 #	PRB_Reference
 #	PRB_Alias

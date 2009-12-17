@@ -7,7 +7,7 @@
 #
 # Purpose:
 #
-#	To load new Probes information into:
+#	To load new Probe/Markers into:
 #
 #	PRB_Marker
 #
@@ -22,9 +22,9 @@
 #
 #	A tab-delimited file in the format:
 #		field 1:  MGI ID Probe		required MGI:
-#		field 2:  MGI ID Marker		MGI:; allows null
+#		field 2:  MGI ID Marker		required MGI:xxx|MGI:xxx|...
 #		field 3:  Reference 		required J:#####
-#		field 4:  Relationship		allows null
+#		field 4:  Relationship		required 'E', 'H'
 #		field 5:  Created By		required
 # Outputs:
 #
@@ -92,7 +92,10 @@ loaddate = loadlib.loaddate
 
 # delete the probe/marker relationships so we can add new ones
 deleteSQL1 = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s\n'
+
+# delete the probes where relationship = "P" (putative)
 deleteSQL2 = 'delete from PRB_Marker where _Probe_key = %s and relationship = "P"\n'
+
 execSQL = ''
 
 # Purpose: prints error message and exits
