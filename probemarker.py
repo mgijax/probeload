@@ -91,7 +91,8 @@ errorFileName = ''	# error file name
 loaddate = loadlib.loaddate
 
 # delete the probe/marker relationships so we can add new ones
-deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s\n'
+deleteSQL1 = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s\n'
+deleteSQL2 = 'delete from PRB_Marker where _Probe_key = %s and relationship = "P"\n'
 execSQL = ''
 
 # Purpose: prints error message and exits
@@ -290,7 +291,8 @@ def processFile():
 	    if markerList.count(markerKey) == 1:
                 markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
 		    % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
-		execSQL = execSQL + deleteSQL % (probeKey, markerKey)
+		execSQL = execSQL + deleteSQL1 % (probeKey, markerKey)
+		execSQL = execSQL + deleteSQL2 % (probeKey)
             else:
 		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
