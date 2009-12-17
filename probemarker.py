@@ -200,9 +200,9 @@ def verifyMode():
 def bcpFiles():
 
     bcpdelim = "|"
+    diagFile.write(execSQL)
 
     if DEBUG or not bcpon:
-	#print execSQL
         return
 
     markerFile.close()
@@ -246,7 +246,8 @@ def processFile():
 	    probeID = tokens[0]
 	    markerIDs = string.split(tokens[1], '|')
 	    jnum = tokens[2]
-	    createdBy = tokens[3]
+	    relationship = tokens[3]
+	    createdBy = tokens[4]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
