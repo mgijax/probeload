@@ -26,6 +26,7 @@
 #		field 3:  Reference 		required J:#####
 #		field 4:  Relationship		required 'E', 'H'
 #		field 5:  Created By		required
+#
 # Outputs:
 #
 #       1 BCP files:
@@ -91,10 +92,7 @@ errorFileName = ''	# error file name
 loaddate = loadlib.loaddate
 
 # delete the probe/marker relationships so we can add new ones
-deleteSQL1 = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s\n'
-
-# delete the probes where relationship = "P" (putative)
-deleteSQL2 = 'delete from PRB_Marker where _Probe_key = %s and relationship = "P"\n'
+deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s\n'
 
 execSQL = ''
 
@@ -294,8 +292,7 @@ def processFile():
 	    if markerList.count(markerKey) == 1:
                 markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
 		    % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
-		execSQL = execSQL + deleteSQL1 % (probeKey, markerKey)
-		execSQL = execSQL + deleteSQL2 % (probeKey)
+		execSQL = execSQL + deleteSQL % (probeKey, markerKey)
             else:
 		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
