@@ -26,26 +26,30 @@
 # Inputs:
 #
 #	A tab-delimited file in the format:
-#		field 1:  Probe Name
-#		field 2:  Reference (J:#####)
-#		field 3:  Source Name
-#		field 4:  Organism
-#		field 5:  Strain
-#		field 6:  Tissue
-#		field 7:  Gender
-#		field 8:  Cell Line
-#		field 9:  Age
-#		field 10: Vector Type
-#		field 11: Segment Type
-#		field 12: Region Covered
-#		field 13: Insert Site
-#		field 14: Insert Size
-#		field 15: MGI Marker
-#		field 16: Relationship
-#		field 17: Sequence ID	(LogicalDB:Acc ID|...)
-#		field 18: Notes
-#		field 19: Created By
+#		field 1:  Probe Name		required
+#		field 2:  Reference 		required J:#####
+#		field 3:  Parent 		allows null or MGI ID
+#		field 4:  Source Name		allows null
+#		field 5:  Organism		allows null
+#		field 6:  Strain		allows null
+#		field 7:  Tissue		allows null
+#		field 8:  Gender		allows null
+#		field 9:  Cell Line		allows null
+#		field 10: Age			allows null
+#		field 11: Vector Type		required vocab term
+#		field 12: Segment Type		required vocab term
+#		field 13: Region Covered	allows null
+#		field 14: Insert Site		allows null
+#		field 15: Insert Size		allows null
+#		field 16: MGI Marker    	MGI ID|MGI ID|...
+#		field 17: Relationship		required
+#		field 18: Sequence ID		LogicalDB:Acc ID|...
+#		field 19: Notes			allows null
+#		field 20: Created By		required
 #
+# 	If Parent is not null, then set Source Name = Source Name of Parent Probe
+#	Parent overrides Source
+#	
 # Outputs:
 #
 #       6 BCP files:
@@ -71,6 +75,9 @@
 # Implementation:
 #
 # History
+#
+# 12/16/2009	lec
+#	- TR9931/Eurexpress/add field 3/Parent Probe (derivedFrom)
 #
 # 11/04/2009	lec
 #	- TR9931;add ability to add multiple markers to PRB_Marker
@@ -135,6 +142,7 @@ probeKey = 0            # PRB_Probe._Probe_key
 refKey = 0		# PRB_Reference._Reference_key
 accKey = 0              # ACC_Accession._Accession_key
 mgiKey = 0              # ACC_AccessionMax.maxNumericPart
+parentProbeDict = {}
 
 NA = -2			# for Not Applicable fields
 mgiTypeKey = 3		# Molecular Segment
@@ -269,6 +277,49 @@ def verifyMode():
     elif mode != 'load':
         exit(1, 'Invalid Processing Mode:  %s\n' % (mode))
 
+# Purpose:  verify Parent Probe Accession ID
+# Returns:  Probe Key if Parent Probe is valid, else 0
+#           Source Key if Parent Probe is valid, else 0
+# Assumes:  nothing
+# Effects:  verifies that the Parent Probe exists either in the Parent Probe dictionary or the database
+#       writes to the error file if the Parent Probe is invalid
+#       adds the Parent Probe id and key to the Parent Probe dictionary if the Parent Probe is valid
+# Throws:  nothing
+
+def verifyParentProbe(
+    probeID,    # Accession ID of the Probe (string)
+    lineNum,    # line number (integer)
+    errorFile   # error file (file descriptor)
+    ):
+
+    global parentProbeDict
+
+    probeKey = 0
+    sourceKey = 0
+
+    if parentProbeDict.has_key(probeID):
+        return parentProbeDict[probeID]
+    else:
+        results = db.sql('''
+        	select a._Object_key, p._Source_key 
+		from ACC_Accession a, PRB_Probe p 
+		where a.accID = "%s"
+		and a._MGIType_key = 3
+		and a._Object_key = p._Probe_key
+		''' % (probeID), 'auto')
+
+        for r in results:
+            if r['_Source_key'] is None:
+                if errorFile != None:
+                    errorFile.write('Invalid Derivied Probe (%d) %s\n' % (lineNum, probeID))
+                probeKey = 0
+            else:
+                probeKey = r['_Object_key']
+                sourceKey = r['_Source_key']
+                parentProbeDict[probeID] = probeKey
+
+    return probeKey, sourceKey
+
 # Purpose:  sets global primary key variables
 # Returns:  nothing
 # Assumes:  nothing
@@ -352,27 +403,39 @@ def processFile():
         try:
 	    name = tokens[0]
 	    jnum = tokens[1]
-	    sourceName = tokens[2]
-	    organism = tokens[3]
-	    strain = tokens[4]
-	    tissue = tokens[5]
-	    gender = tokens[6]
-	    cellLine = tokens[7]
-	    age = tokens[8]
-	    vectorType = tokens[9]
-	    segmentType = tokens[10]
-	    regionCovered = tokens[11]
-	    insertSite = tokens[12]
-	    insertSize = tokens[13]
-	    markerIDs = string.split(tokens[14], '|')
-	    relationship = tokens[15]
-	    sequenceIDs = tokens[16]
-	    notes = tokens[17]
-	    createdBy = tokens[18]
+	    parentID = tokens[2]
+	    sourceName = tokens[3]
+	    organism = tokens[4]
+	    strain = tokens[5]
+	    tissue = tokens[6]
+	    gender = tokens[7]
+	    cellLine = tokens[8]
+	    age = tokens[9]
+	    vectorType = tokens[10]
+	    segmentType = tokens[11]
+	    regionCovered = tokens[12]
+	    insertSite = tokens[13]
+	    insertSize = tokens[14]
+	    markerIDs = string.split(tokens[15], '|')
+	    relationship = tokens[16]
+	    sequenceIDs = tokens[17]
+	    notes = tokens[18]
+	    createdBy = tokens[19]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
-	if sourceName == '':
+	isParent = 0
+	isSource = 0
+	parentProbeKey = '';
+	sourceKey = 0
+
+	if parentID != '':
+	    isParent = 1
+
+	if sourceName != '':
+	    isSource = 1
+
+	if not isParent and not isSource:
 	    organismKey = sourceloadlib.verifyOrganism(organism, lineNum, errorFile)
 	    strainKey = sourceloadlib.verifyStrain(strain, lineNum, errorFile)
 	    tissueKey = sourceloadlib.verifyTissue(tissue, lineNum, errorFile)
@@ -389,12 +452,21 @@ def processFile():
                segmentTypeKey == 0 or sourceKey == 0:
 	        error = 1
 
-	else:
+        elif not isParent and isSource:
 	    vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
 	    segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
 	    sourceKey = sourceloadlib.verifyLibrary(sourceName, lineNum, errorFile)
 
 	    if vectorKey == 0 or segmentTypeKey == 0 or sourceKey == 0:
+	        error = 1
+
+	# parent from = yes, source given = yes or no (ignored)
+	else:
+	    parentProbeKey, sourceKey = verifyParentProbe(parentID, lineNum, errorFile)
+	    vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
+	    segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
+
+	    if parentProbeKey == 0 or sourceKey == 0 or vectorKey == 0 or segmentTypeKey == 0:
 	        error = 1
 
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
@@ -436,8 +508,8 @@ def processFile():
 
         # if no errors, process the probe
 
-        probeFile.write('%d|%s||%s|%s|%s|||%s|%s|%s||%s|%s|%s|%s\n' \
-            % (probeKey, name, sourceKey, vectorKey, segmentTypeKey, mgi_utils.prvalue(regionCovered), \
+        probeFile.write('%d|%s|%s|%s|%s|%s|||%s|%s|%s||%s|%s|%s|%s\n' \
+            % (probeKey, name, parentProbeKey, sourceKey, vectorKey, segmentTypeKey, mgi_utils.prvalue(regionCovered), \
 	    mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), createdByKey, createdByKey, loaddate, loaddate))
 
 	for markerKey in markerList:

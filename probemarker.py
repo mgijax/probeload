@@ -1,7 +1,7 @@
 #!/usr/local/bin/python
 
 #
-# Program: probeextras.py
+# Program: probemarker.py
 #
 # Original Author: Lori Corbani
 #
@@ -10,13 +10,11 @@
 #	To load new Probes information into:
 #
 #	PRB_Marker
-#	PRB_Reference
-#	PRB_Alias
 #
 # Requirements Satisfied by This Program:
 #
 # Usage:
-#	probeextras.py
+#	probemarker.py
 #
 # Envvars:
 #
@@ -27,20 +25,12 @@
 #		field 2:  MGI ID Marker		MGI:; allows null
 #		field 3:  Reference 		required J:#####
 #		field 4:  Relationship		allows null
-#		field 5:  Alias                 allows null
-#		field 6:  Created By		required
-#
-#	PRB_Reference data is always loaded
-# 	If Marker given, then PRB_Marker (J:, Relationship) data is also loaded
-# 	If Alias given, then PRB_Alias (Alias) is also loaded
-#	
+#		field 5:  Created By		required
 # Outputs:
 #
-#       3 BCP files:
+#       1 BCP files:
 #
 #	PRB_Marker.bcp			Probe/Marker records
-#       PRB_Reference.bcp         	Probe Reference records
-#       PRB_Alias.bcp         		Probe Alias records
 #
 #       Diagnostics file of all input parameters and SQL commands
 #       Error file
@@ -90,22 +80,13 @@ diagFile = ''		# diagnostic file descriptor
 errorFile = ''		# error file descriptor
 inputFile = ''		# file descriptor
 markerFile = ''		# file descriptor
-refFile = ''            # file descriptor
-aliasFile = ''          # file descriptor
 
 markerTable = 'PRB_Marker'
-refTable = 'PRB_Reference'
-aliasTable = 'PRB_Alias'
 
 markerFileName = outputDir + '/' + markerTable + '.bcp'
-refFileName = outputDir + '/' + refTable + '.bcp'
-aliasFileName = outputDir + '/' + aliasTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
-
-refKey = 0		# PRB_Reference._Reference_key
-aliasKey = 0		# PRB_Alias._Alias_key
 
 loaddate = loadlib.loaddate
 
@@ -148,7 +129,7 @@ def exit(
 
 def init():
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
-    global markerFile, refFile, aliasFile
+    global markerFile
  
     db.useOneConnection(1)
     db.set_sqlUser(user)
@@ -178,16 +159,6 @@ def init():
         markerFile = open(markerFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % markerFileName)
-
-    try:
-        refFile = open(refFileName, 'w')
-    except:
-        exit(1, 'Could not open file %s\n' % refFileName)
-
-    try:
-        aliasFile = open(aliasFileName, 'w')
-    except:
-        exit(1, 'Could not open file %s\n' % aliasFileName)
 
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
@@ -220,22 +191,6 @@ def verifyMode():
     elif mode != 'load':
         exit(1, 'Invalid Processing Mode:  %s\n' % (mode))
 
-# Purpose:  sets global primary key variables
-# Returns:  nothing
-# Assumes:  nothing
-# Effects:  sets global primary key variables
-# Throws:   nothing
-
-def setPrimaryKeys():
-
-    global refKey, aliasKey
-
-    results = db.sql('select maxKey = max(_Reference_key) + 1 from PRB_Reference', 'auto')
-    refKey = results[0]['maxKey']
-
-    results = db.sql('select maxKey = max(_Alias_key) + 1 from PRB_Alias', 'auto')
-    aliasKey = results[0]['maxKey']
-
 # Purpose:  BCPs the data into the database
 # Returns:  nothing
 # Assumes:  nothing
@@ -251,8 +206,6 @@ def bcpFiles():
         return
 
     markerFile.close()
-    refFile.close()
-    aliasFile.close()
 
     # execute the sql deletions
     db.sql(execSQL, None)
@@ -261,10 +214,8 @@ def bcpFiles():
     bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
 
     bcp1 = '%s%s in %s %s' % (bcpI, markerTable, markerFileName, bcpII)
-    bcp2 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
-    bcp3 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
 
-    for bcpCmd in [bcp1, bcp2, bcp3]:
+    for bcpCmd in [bcp1]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
 
@@ -278,7 +229,7 @@ def bcpFiles():
 
 def processFile():
 
-    global refKey, aliasKey, execSQL
+    global execSQL
 
     lineNum = 0
     # For each line in the input file
@@ -295,9 +246,7 @@ def processFile():
 	    probeID = tokens[0]
 	    markerIDs = string.split(tokens[1], '|')
 	    jnum = tokens[2]
-	    relationship = tokens[3]
-	    alias = tokens[4]
-	    createdBy = tokens[5]
+	    createdBy = tokens[3]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
@@ -344,16 +293,6 @@ def processFile():
             else:
 		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
-        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
-		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
-
-	if alias != '':
-            aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
-		    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
-
-	refKey = refKey + 1
-	aliasKey = aliasKey + 1
-
     #	end of "for line in inputFile.readlines():"
 
 #
@@ -362,7 +301,6 @@ def processFile():
 
 init()
 verifyMode()
-setPrimaryKeys()
 processFile()
 bcpFiles()
 exit(0)

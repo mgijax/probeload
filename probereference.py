@@ -1,7 +1,7 @@
 #!/usr/local/bin/python
 
 #
-# Program: probeextras.py
+# Program: probereference.py
 #
 # Original Author: Lori Corbani
 #
@@ -9,14 +9,13 @@
 #
 #	To load new Probes information into:
 #
-#	PRB_Marker
 #	PRB_Reference
 #	PRB_Alias
 #
 # Requirements Satisfied by This Program:
 #
 # Usage:
-#	probeextras.py
+#	probereference.py
 #
 # Envvars:
 #
@@ -24,21 +23,14 @@
 #
 #	A tab-delimited file in the format:
 #		field 1:  MGI ID Probe		required MGI:
-#		field 2:  MGI ID Marker		MGI:; allows null
-#		field 3:  Reference 		required J:#####
-#		field 4:  Relationship		allows null
-#		field 5:  Alias                 allows null
-#		field 6:  Created By		required
+#		field 2:  Reference 		required J:#####
+#		field 3:  Alias                 allows null
+#		field 4:  Created By		required
 #
-#	PRB_Reference data is always loaded
-# 	If Marker given, then PRB_Marker (J:, Relationship) data is also loaded
-# 	If Alias given, then PRB_Alias (Alias) is also loaded
-#	
 # Outputs:
 #
-#       3 BCP files:
+#       2 BCP files:
 #
-#	PRB_Marker.bcp			Probe/Marker records
 #       PRB_Reference.bcp         	Probe Reference records
 #       PRB_Alias.bcp         		Probe Alias records
 #
@@ -93,11 +85,9 @@ markerFile = ''		# file descriptor
 refFile = ''            # file descriptor
 aliasFile = ''          # file descriptor
 
-markerTable = 'PRB_Marker'
 refTable = 'PRB_Reference'
 aliasTable = 'PRB_Alias'
 
-markerFileName = outputDir + '/' + markerTable + '.bcp'
 refFileName = outputDir + '/' + refTable + '.bcp'
 aliasFileName = outputDir + '/' + aliasTable + '.bcp'
 
@@ -108,10 +98,6 @@ refKey = 0		# PRB_Reference._Reference_key
 aliasKey = 0		# PRB_Alias._Alias_key
 
 loaddate = loadlib.loaddate
-
-# delete the probe/marker relationships so we can add new ones
-deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s\n'
-execSQL = ''
 
 # Purpose: prints error message and exits
 # Returns: nothing
@@ -148,7 +134,7 @@ def exit(
 
 def init():
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
-    global markerFile, refFile, aliasFile
+    global refFile, aliasFile
  
     db.useOneConnection(1)
     db.set_sqlUser(user)
@@ -173,11 +159,6 @@ def init():
         inputFile = open(inputFileName, 'r')
     except:
         exit(1, 'Could not open file %s\n' % inputFileName)
-
-    try:
-        markerFile = open(markerFileName, 'w')
-    except:
-        exit(1, 'Could not open file %s\n' % markerFileName)
 
     try:
         refFile = open(refFileName, 'w')
@@ -247,24 +228,18 @@ def bcpFiles():
     bcpdelim = "|"
 
     if DEBUG or not bcpon:
-	#print execSQL
         return
 
-    markerFile.close()
     refFile.close()
     aliasFile.close()
-
-    # execute the sql deletions
-    db.sql(execSQL, None)
 
     bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
     bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
 
-    bcp1 = '%s%s in %s %s' % (bcpI, markerTable, markerFileName, bcpII)
-    bcp2 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
-    bcp3 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
+    bcp1 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
+    bcp2 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
 
-    for bcpCmd in [bcp1, bcp2, bcp3]:
+    for bcpCmd in [bcp1, bcp2]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
 
@@ -278,7 +253,7 @@ def bcpFiles():
 
 def processFile():
 
-    global refKey, aliasKey, execSQL
+    global refKey, aliasKey
 
     lineNum = 0
     # For each line in the input file
@@ -293,11 +268,9 @@ def processFile():
 
         try:
 	    probeID = tokens[0]
-	    markerIDs = string.split(tokens[1], '|')
-	    jnum = tokens[2]
-	    relationship = tokens[3]
-	    alias = tokens[4]
-	    createdBy = tokens[5]
+	    jnum = tokens[1]
+	    alias = tokens[2]
+	    createdBy = tokens[3]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
@@ -317,32 +290,11 @@ def processFile():
 	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
 	    error = 1
 
-	# marker IDs
-
-	markerList = []
-	for markerID in markerIDs:
-
-	    markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
-
-	    if markerKey == 0:
-	        errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
-	        error = 1
-            else:
-		markerList.append(markerKey)
-
         # if errors, continue to next record
         if error:
             continue
 
         # if no errors, process
-
-	for markerKey in markerList:
-	    if markerList.count(markerKey) == 1:
-                markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
-		    % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
-		execSQL = execSQL + deleteSQL % (probeKey, markerKey)
-            else:
-		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
         refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
 		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))

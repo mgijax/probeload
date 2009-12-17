@@ -16,6 +16,7 @@ setenv PRIMERDATAFILE	${INPUTDIR}/TR8099data.txt
 setenv PRIMERLOG	${LOGDIR}/TR8099.data.log
 setenv PRIMERMODE	preview
 
+# use same settings for probeload and probeextras...
 setenv PROBEDATAFILE	/mgi/all/wts_projects/9400/9417/probes/?
 setenv PROBELOADDATADIR	/mgi/all/wts_projects/9400/9417/probes
 setenv PROBELOADMODE	preview
