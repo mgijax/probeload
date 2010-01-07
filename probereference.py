@@ -24,7 +24,7 @@
 #	A tab-delimited file in the format:
 #		field 1:  MGI ID Probe		required MGI:
 #		field 2:  Reference 		required J:#####
-#		field 3:  Alias                 allows null
+#		field 3:  Alias                 allows null (Alias|Alias...)
 #		field 4:  Created By		required
 #
 # Outputs:
@@ -269,7 +269,7 @@ def processFile():
         try:
 	    probeID = tokens[0]
 	    jnum = tokens[1]
-	    alias = tokens[2]
+	    aliasList = string.split(tokens[2], '|')
 	    createdBy = tokens[3]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
@@ -299,7 +299,9 @@ def processFile():
         refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
 		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
-	if alias != '':
+        # aliases
+
+        for alias in aliasList:
             aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
 		    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
 
