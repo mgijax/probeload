@@ -304,9 +304,9 @@ def processFile():
         for alias in aliasList:
             aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
 		    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
+	    aliasKey = aliasKey + 1
 
 	refKey = refKey + 1
-	aliasKey = aliasKey + 1
 
     #	end of "for line in inputFile.readlines():"
 
