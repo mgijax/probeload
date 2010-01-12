@@ -480,10 +480,10 @@ def processFile():
 
 	    markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
 
-	    if markerKey == 0:
+	    if len(markerID) > 0 and markerKey == 0:
 	        errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
 	        error = 1
-            else:
+            elif len(markerID) > 0:
 		markerList.append(markerKey)
 
 	# sequence IDs
