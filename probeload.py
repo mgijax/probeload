@@ -142,7 +142,6 @@ probeKey = 0            # PRB_Probe._Probe_key
 refKey = 0		# PRB_Reference._Reference_key
 accKey = 0              # ACC_Accession._Accession_key
 mgiKey = 0              # ACC_AccessionMax.maxNumericPart
-parentProbeDict = {}
 
 NA = -2			# for Not Applicable fields
 mgiTypeKey = 3		# Molecular Segment
@@ -292,15 +291,10 @@ def verifyParentProbe(
     errorFile   # error file (file descriptor)
     ):
 
-    global parentProbeDict
-
     probeKey = 0
     sourceKey = 0
 
-    if parentProbeDict.has_key(probeID):
-        return parentProbeDict[probeID]
-    else:
-        results = db.sql('''
+    results = db.sql('''
         	select a._Object_key, p._Source_key 
 		from ACC_Accession a, PRB_Probe p 
 		where a.accID = "%s"
@@ -308,15 +302,14 @@ def verifyParentProbe(
 		and a._Object_key = p._Probe_key
 		''' % (probeID), 'auto')
 
-        for r in results:
-            if r['_Source_key'] is None:
-                if errorFile != None:
-                    errorFile.write('Invalid Derivied Probe (%d) %s\n' % (lineNum, probeID))
-                probeKey = 0
-            else:
-                probeKey = r['_Object_key']
-                sourceKey = r['_Source_key']
-                parentProbeDict[probeID] = probeKey
+    for r in results:
+        if r['_Source_key'] is None:
+            if errorFile != None:
+                errorFile.write('Invalid Derivied Probe (%d) %s\n' % (lineNum, probeID))
+            probeKey = 0
+        else:
+            probeKey = r['_Object_key']
+            sourceKey = r['_Source_key']
 
     return probeKey, sourceKey
 
