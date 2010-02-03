@@ -536,7 +536,7 @@ def processFile():
 	    mgi_utils.prvalue(regionCovered) + \
 	    mgi_utils.prvalue(insertSite), \
 	    mgi_utils.prvalue(insertSize), \
-	    markerID, \
+	    string.join(markerIDs, '|'), \
 	    relationship, \
 	    mgi_utils.prvalue(sequenceIDs), \
 	    mgi_utils.prvalue(notes), \

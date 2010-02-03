@@ -296,7 +296,7 @@ def processFile():
 	    markerIDs = string.split(tokens[1], '|')
 	    jnum = tokens[2]
 	    relationship = tokens[3]
-	    alias = tokens[4]
+	    aliasList = string.split(tokens[4], '|')
 	    createdBy = tokens[5]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
@@ -347,12 +347,14 @@ def processFile():
         refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
 		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
-	if alias != '':
+        # aliases
+
+        for alias in aliasList:
             aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
 		    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
+	    aliasKey = aliasKey + 1
 
 	refKey = refKey + 1
-	aliasKey = aliasKey + 1
 
     #	end of "for line in inputFile.readlines():"
 
