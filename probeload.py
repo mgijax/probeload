@@ -12,6 +12,7 @@
 #	PRB_Probe
 #	PRB_Marker
 #	PRB_Reference
+#       PRB_Alias
 #	ACC_Accession
 #	ACC_AccessionReference
 #	PRB_Notes
@@ -44,19 +45,21 @@
 #		field 16: MGI Marker    	MGI ID|MGI ID|...
 #		field 17: Relationship		required
 #		field 18: Sequence ID		LogicalDB:Acc ID|...
-#		field 19: Notes			allows null
-#		field 20: Created By		required
+#		field 19: Alias			allows null
+#		field 20: Notes			allows null
+#		field 21: Created By		required
 #
 # 	If Parent is not null, then set Source Name = Source Name of Parent Probe
 #	Parent overrides Source
 #	
 # Outputs:
 #
-#       6 BCP files:
+#       7 BCP files:
 #
 #       PRB_Probe.bcp                   master Probe records
 #	PRB_Marker.bcp			Probe/Marker records
 #       PRB_Reference.bcp         	Probe Reference records
+#       PRB_Alias
 #       ACC_Accession.bcp               Accession records
 #       ACC_AccessionReference.bcp      Accession Reference records
 #       PRB_Notes.bcp               	Probe Notes
@@ -115,13 +118,15 @@ inputFile = ''		# file descriptor
 probeFile = ''          # file descriptor
 markerFile = ''		# file descriptor
 refFile = ''            # file descriptor
+aliasFile = ''          # file descriptor
 accFile = ''            # file descriptor
-accRefFile = ''           # file descriptor
+accRefFile = ''         # file descriptor
 noteFile = ''		# file descriptor
 
 probeTable = 'PRB_Probe'
 markerTable = 'PRB_Marker'
 refTable = 'PRB_Reference'
+aliasTable = 'PRB_Alias'
 accTable = 'ACC_Accession'
 accRefTable = 'ACC_AccessionReference'
 noteTable = 'PRB_Notes'
@@ -130,6 +135,7 @@ newProbeFile = 'newProbe.txt'
 probeFileName = outputDir + '/' + probeTable + '.bcp'
 markerFileName = outputDir + '/' + markerTable + '.bcp'
 refFileName = outputDir + '/' + refTable + '.bcp'
+aliasFileName = outputDir + '/' + aliasTable + '.bcp'
 accFileName = outputDir + '/' + accTable + '.bcp'
 accRefFileName = outputDir + '/' + accRefTable + '.bcp'
 noteFileName = outputDir + '/' + noteTable + '.bcp'
@@ -140,6 +146,7 @@ errorFileName = ''	# error file name
 
 probeKey = 0            # PRB_Probe._Probe_key
 refKey = 0		# PRB_Reference._Reference_key
+aliasKey = 0		# PRB_Reference._Reference_key
 accKey = 0              # ACC_Accession._Accession_key
 mgiKey = 0              # ACC_AccessionMax.maxNumericPart
 
@@ -184,7 +191,7 @@ def exit(
 
 def init():
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
-    global probeFile, markerFile, refFile, accFile, accRefFile, noteFile, newProbeFile
+    global probeFile, markerFile, refFile, aliasFile, accFile, accRefFile, noteFile, newProbeFile
  
     db.useOneConnection(1)
     db.set_sqlUser(user)
@@ -224,6 +231,11 @@ def init():
         refFile = open(refFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % refFileName)
+
+    try:
+        aliasFile = open(aliasFileName, 'w')
+    except:
+        exit(1, 'Could not open file %s\n' % aliasFileName)
 
     try:
         accFile = open(accFileName, 'w')
@@ -321,13 +333,16 @@ def verifyParentProbe(
 
 def setPrimaryKeys():
 
-    global probeKey, refKey, accKey, mgiKey
+    global probeKey, refKey, aliasKey, accKey, mgiKey
 
     results = db.sql('select maxKey = max(_Probe_key) + 1 from PRB_Probe', 'auto')
     probeKey = results[0]['maxKey']
 
     results = db.sql('select maxKey = max(_Reference_key) + 1 from PRB_Reference', 'auto')
     refKey = results[0]['maxKey']
+
+    results = db.sql('select maxKey = max(_Alias_key) + 1 from PRB_Alias', 'auto')
+    aliasKey = results[0]['maxKey']
 
     results = db.sql('select maxKey = max(_Accession_key) + 1 from ACC_Accession', 'auto')
     accKey = results[0]['maxKey']
@@ -352,6 +367,7 @@ def bcpFiles():
     probeFile.close()
     markerFile.close()
     refFile.close()
+    aliasFile.close()
     accFile.close()
     accRefFile.close()
     noteFile.close()
@@ -362,11 +378,12 @@ def bcpFiles():
     bcp1 = '%s%s in %s %s' % (bcpI, probeTable, probeFileName, bcpII)
     bcp2 = '%s%s in %s %s' % (bcpI, markerTable, markerFileName, bcpII)
     bcp3 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
-    bcp4 = '%s%s in %s %s' % (bcpI, accTable, accFileName, bcpII)
-    bcp5 = '%s%s in %s %s' % (bcpI, accRefTable, accRefFileName, bcpII)
-    bcp6 = '%s%s in %s %s' % (bcpI, noteTable, noteFileName, bcpII)
+    bcp4 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
+    bcp5 = '%s%s in %s %s' % (bcpI, accTable, accFileName, bcpII)
+    bcp6 = '%s%s in %s %s' % (bcpI, accRefTable, accRefFileName, bcpII)
+    bcp7 = '%s%s in %s %s' % (bcpI, noteTable, noteFileName, bcpII)
 
-    for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6]:
+    for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6, bcp7]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
 
@@ -380,7 +397,7 @@ def bcpFiles():
 
 def processFile():
 
-    global probeKey, refKey, accKey, mgiKey
+    global probeKey, refKey, aliasKey, accKey, mgiKey
 
     lineNum = 0
     # For each line in the input file
@@ -412,8 +429,9 @@ def processFile():
 	    markerIDs = string.split(tokens[15], '|')
 	    relationship = tokens[16]
 	    sequenceIDs = tokens[17]
-	    notes = tokens[18]
-	    createdBy = tokens[19]
+	    aliasList = string.split(tokens[18], '|')
+	    notes = tokens[19]
+	    createdBy = tokens[20]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
@@ -515,6 +533,13 @@ def processFile():
         refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
 		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
+        # aliases
+
+        for alias in aliasList:
+            aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
+		    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
+	    aliasKey = aliasKey + 1
+
         # MGI Accession ID for the marker
 
         accFile.write('%s|%s%d|%s|%s|1|%d|%d|0|1|%s|%s|%s|%s\n' \
@@ -522,7 +547,7 @@ def processFile():
 
 	# Print out a new text file and attach the new MGI Probe IDs as the last field
 
-        newProbeFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
+        newProbeFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
 	    % (name, jnum, \
 	    mgi_utils.prvalue(sourceName), \
 	    organism, \
@@ -539,6 +564,7 @@ def processFile():
 	    string.join(markerIDs, '|'), \
 	    relationship, \
 	    mgi_utils.prvalue(sequenceIDs), \
+	    string.join(aliasList, '|'), \
 	    mgi_utils.prvalue(notes), \
 	    createdBy, mgiPrefix, mgiKey))
 
