@@ -188,7 +188,7 @@ def verifyMode():
     if mode == 'preview':
         DEBUG = 1
         bcpon = 0
-    elif mode = ('load', 'load-nodelete':
+    elif mode = ('load', 'load-notdeleted':
         exit(1, 'Invalid Processing Mode:  %s\n' % (mode))
 
 # Purpose:  BCPs the data into the database

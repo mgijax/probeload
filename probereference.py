@@ -198,7 +198,7 @@ def verifyMode():
     if mode == 'preview':
         DEBUG = 1
         bcpon = 0
-    elif mode != 'load':
+    elif mode not in ('load', 'load-noreference'):
         exit(1, 'Invalid Processing Mode:  %s\n' % (mode))
 
 # Purpose:  sets global primary key variables
@@ -296,8 +296,9 @@ def processFile():
 
         # if no errors, process
 
-        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
-		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+        if mode == 'load':
+            refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
+		    % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # aliases
 
