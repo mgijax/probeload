@@ -188,7 +188,7 @@ def verifyMode():
     if mode == 'preview':
         DEBUG = 1
         bcpon = 0
-    elif mode in ('load', 'load-notdeleted'):
+    elif mode not in ('load', 'load-notdeleted'):
         exit(1, 'Invalid Processing Mode:  %s\n' % (mode))
 
 # Purpose:  BCPs the data into the database
@@ -269,7 +269,7 @@ def processFile():
         # Notes
 
 	# automatically deletes any existing notes for this probe
-        if mode == 'load':
+        if mode in ('preview', 'load'):
 	    execSQL = execSQL + deleteSQL % (probeKey)
 
         noteSeq = 1
