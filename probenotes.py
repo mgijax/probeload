@@ -167,7 +167,7 @@ def init():
     db.set_sqlLogFD(diagFile)
 
     diagFile.write('Start Date/Time: %s\n' % (mgi_utils.date()))
-    diagFile.write('Server: %s\n' % (db.get_sqlServer))
+    diagFile.write('Server: %s\n' % (db.get_sqlServer()))
     diagFile.write('Database: %s\n' % (db.get_sqlDatabase()))
 
     errorFile.write('Start Date/Time: %s\n\n' % (mgi_utils.date()))
@@ -188,7 +188,7 @@ def verifyMode():
     if mode == 'preview':
         DEBUG = 1
         bcpon = 0
-    elif mode = ('load', 'load-notdeleted':
+    elif mode in ('load', 'load-notdeleted'):
         exit(1, 'Invalid Processing Mode:  %s\n' % (mode))
 
 # Purpose:  BCPs the data into the database
@@ -275,13 +275,13 @@ def processFile():
         noteSeq = 1
       
         while len(notes) > 255:
-            noteFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes[:255], loaddate, loaddate))
+            notesFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes[:255], loaddate, loaddate))
             newnote = notes[255:]
             notes = newnote
             noteSeq = noteSeq + 1
 
         if len(notes) > 0:
-            noteFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes, loaddate, loaddate))
+            notesFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes, loaddate, loaddate))
 
     #	end of "for line in inputFile.readlines():"
 
