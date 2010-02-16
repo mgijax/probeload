@@ -1,48 +1,48 @@
 #!/usr/local/bin/python
 
 #
-# Program: probereference.py
+# Program: probeassay.py
 #
 # Original Author: Lori Corbani
 #
 # Purpose:
 #
-#	To load new Probe/Reference/Alias into:
+#	Given 2 probes A & B:
 #
-#	PRB_Reference
-#	PRB_Alias
+#	.  Add alias to probe B using probe A's name, J:
+#	.  Move probe A's assay associations to probe B
+#	.  Move probe A's references to probe B (assumes no duplicates)
+#	.  Delete probe A
+#	
+#	probe A/gene == probe B/gene == assay/gene
+#	if the genes for probe A, probe B and the assay do not match,
+#		return with error
 #
 # Requirements Satisfied by This Program:
 #
 # Usage:
-#	probereference.py
+#	probeassay.py
 #
 # Envvars:
 #
 # Inputs:
 #
 #	A tab-delimited file in the format:
-#		field 1:  MGI ID Probe		required MGI:
-#		field 2:  Reference 		required J:#####
-#		field 3:  Alias                 allows null (Alias|Alias...)
-#		field 4:  Created By		required
+#		field 1:  MGI Probe ID A (from)
+#		field 2:  Probe A name
+#		field 3:  MGI Probe ID B (to)
+#		field 4:  J: (for alias)
+#		field 5:  Created by
 #
 # Outputs:
 #
 #       2 BCP files:
 #
-#       PRB_Reference.bcp         	Probe Reference records
-#       PRB_Alias.bcp         		Probe Alias records
+#       PRB_Reference.bcp               Probe Reference records
+#       PRB_Alias.bcp                   Probe Alias records
 #
 #       Diagnostics file of all input parameters and SQL commands
 #       Error file
-#
-# Modes:
-#
-#	preview			preview the load
-#	load			create PRB_Reference and PRB_Alias records
-#	preview-noreference	preview the PRB_Alias only load
-#	load-noreference	create PRB_Alias records only/expects PRB_Reference to exist
 #
 # Exit Codes:
 #
@@ -56,7 +56,7 @@
 #
 # History
 #
-# 12/16/2009	lec
+# 02/02/2010	lec
 #	- TR9931/Eurexpress/new
 #
 
@@ -67,6 +67,7 @@ import accessionlib
 import db
 import mgi_utils
 import loadlib
+import sourceloadlib
 
 #globals
 
@@ -83,12 +84,10 @@ DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab
 CRT = '\n'		# carriage return/newline
 
-bcpon = 1		# can the bcp files be bcp-ed into the database?  default is yes.
-
 diagFile = ''		# diagnostic file descriptor
 errorFile = ''		# error file descriptor
 inputFile = ''		# file descriptor
-markerFile = ''		# file descriptor
+
 refFile = ''            # file descriptor
 aliasFile = ''          # file descriptor
 
@@ -101,8 +100,17 @@ aliasFileName = outputDir + '/' + aliasTable + '.bcp'
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
 
-refKey = 0		# PRB_Reference._Reference_key
-aliasKey = 0		# PRB_Alias._Alias_key
+refKey = 0              # PRB_Reference._Reference_key
+aliasKey = 0            # PRB_Alias._Alias_key
+
+mgiTypeKey = '3'
+updateAssaySQL = '''update GXD_ProbePrep set _Probe_key = %s where _Probe_key = %s\n'''
+updateRefSQL = '''update PRB_Reference set _Probe_key = %s where _Probe_key = %s\n'''
+deleteProbeSQL = '''delete PRB_Probe from PRB_Probe where _Probe_key = %s\n'''
+
+execAssaySQL = ''
+execRefSQL = ''
+execProbeSQL = ''
 
 loaddate = loadlib.loaddate
 
@@ -202,46 +210,11 @@ def verifyMode():
 
     global DEBUG
 
-    if mode in ('preview', 'preview-noreference'):
+    if mode == 'preview':
         DEBUG = 1
         bcpon = 0
-    elif mode not in ('load', 'load-noreference'):
+    elif mode != 'load':
         exit(1, 'Invalid Processing Mode:  %s\n' % (mode))
-
-# Purpose:  verify Probe Reference based on Probe Accession ID and J:
-# Returns:  Probe Reference Key if Probe and Reference are valid, else 0
-# Assumes:  nothing
-# Effects:  verifies that the Probe Reference exists in the database
-#       writes to the error file if the Probe Reference is invalid
-# Throws:  nothing
-
-def verifyProbeReference(
-    probeID,     # Accession ID of the Probe (string)
-    referenceID, # Reference Accession ID (string)
-    lineNum,     # line number (integer)
-    errorFile    # error file (file descriptor)
-    ):
-
-    probereferenceKey = None
-
-    results = db.sql('''
-                     select r._Reference_key 
-                     from PRB_Reference r, PRB_Acc_View p, BIB_View b
-                     where p.accID = "%s" 
-		     and b.jnumID = "%s"
-		     and p._Object_key = r._Probe_key
-		     and b._Refs_key = r._Refs_key
-                     ''' % (probeID, referenceID), 'auto')
-
-    for r in results:
-        probereferenceKey = r['_Reference_key']
-
-    if probereferenceKey is None:
-        if errorFile != None:
-            errorFile.write('Invalid Probe Reference (%d) %s, %s\n' % (lineNum, probeID, referenceID))
-        probereferenceKey = 0
-
-    return probereferenceKey
 
 # Purpose:  sets global primary key variables
 # Returns:  nothing
@@ -268,12 +241,26 @@ def setPrimaryKeys():
 def bcpFiles():
 
     bcpdelim = "|"
+    diagFile.write(execAssaySQL)
+    diagFile.write(execRefSQL)
+    diagFile.write(execProbeSQL)
 
     if DEBUG or not bcpon:
         return
 
     refFile.close()
     aliasFile.close()
+
+    # execute the sql commands
+
+    # move assay information from fromID to toID
+    db.sql(execAssaySQL, None)
+
+    # move fromID (from) references to toID
+    db.sql(execRefSQL, None)
+
+    # delete fromID (from)
+    db.sql(execProbeSQL, None)
 
     bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
     bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
@@ -282,8 +269,8 @@ def bcpFiles():
     bcp2 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
 
     for bcpCmd in [bcp1, bcp2]:
-	diagFile.write('%s\n' % bcpCmd)
-	os.system(bcpCmd)
+        diagFile.write('%s\n' % bcpCmd)
+        os.system(bcpCmd)
 
     return
 
@@ -296,75 +283,82 @@ def bcpFiles():
 def processFile():
 
     global refKey, aliasKey
+    global execProbeSQL
+    global execAssaySQL
+    global execRefSQL
 
     lineNum = 0
     # For each line in the input file
 
     for line in inputFile.readlines():
 
-        error = 0
+	error = 0
         lineNum = lineNum + 1
 
         # Split the line into tokens
         tokens = string.split(line[:-1], '\t')
 
         try:
-	    probeID = tokens[0]
-	    jnum = tokens[1]
-	    aliasList = string.split(tokens[2], '|')
-	    createdBy = tokens[3]
+	    fromID = tokens[0]
+	    name = tokens[1]
+	    toID = tokens[2]
+	    jnum = tokens[3]
+	    createdBy = tokens[4]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
-        probeKey = loadlib.verifyProbe(probeID, lineNum, errorFile)
-        referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
+        fromKey = loadlib.verifyObject(fromID, mgiTypeKey, None, lineNum, errorFile)
+        toKey = loadlib.verifyObject(toID, mgiTypeKey, None, lineNum, errorFile)
+	referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
 	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	# use the existing probe-reference key
+	if fromKey == 0:
+            errorFile.write('Invalid Probe "From":  %s\n' % (fromID))
+            error = 1
 
-        if mode in ('preview-noreference', 'load-noreference'):
-            probeReferenceKey = verifyProbeReference(probeID, jnum, lineNum, errorFile)
-	    aliasrefKey = probeReferenceKey
-        else:
-	    probeReferenceKey = None
+	if toKey == 0:
+            errorFile.write('Invalid Probe "To":  %s\n' % (toID))
+            error = 1
 
-	if probeKey == 0:
-	    errorFile.write('Invalid Probe:  %s\n' % (probeID))
-	    error = 1
+        if referenceKey == 0:
+            errorFile.write('Invalid Reference:  %s\n' % (jnum))
+            error = 1
 
-	if referenceKey == 0:
-	    errorFile.write('Invalid Reference:  %s\n' % (jnum))
-	    error = 1
-
-	if probeReferenceKey == 0:
-	    errorFile.write('Invalid Probe Reference:  %s, %s\n' % (probeID, jnum))
-	    error = 1
-
-	if createdByKey == 0:
-	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
-	    error = 1
+        if createdByKey == 0:
+            errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
+            error = 1
 
         # if errors, continue to next record
         if error:
             continue
 
-        # if no errors, process
+	results = db.sql('''
+			 select a.accID, aa.accID
+			 from ACC_Accession a, GXD_ProbePrep p, GXD_Assay g, ACC_Accession aa
+			 where p._Probe_key = %s
+			 and p._ProbePrep_key = g._ProbePrep_key
+			 and g._Assay_key = aa._Object_key
+			 and aa._MGIType_key = 8
+			 ''' % (fromKey), 'auto')
+        for r in results:
+	    print fromID, toID, r 
 
-	# create a new probe-reference key
+	# add alias using fromID name (from) to toID
+        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
+        	% (refKey, toKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+        refKey = refKey + 1
+        aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
+        	% (aliasKey, refKey, name, createdByKey, createdByKey, loaddate, loaddate))
+        aliasKey = aliasKey + 1
 
-        if mode in ('preview', 'load'):
-            refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
-		    % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
-	    aliasrefKey = refKey
-	    refKey = refKey + 1
+	# move assay information from fromID to toID
+	execAssaySQL = execAssaySQL + updateAssaySQL % (toKey, fromKey)
 
-        # aliases
+	# move fromID (from) references to toID
+	execRefSQL = execRefSQL + updateRefSQL % (toKey, fromKey)
 
-        for alias in aliasList:
-            aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
-		    % (aliasKey, aliasrefKey, alias, createdByKey, createdByKey, loaddate, loaddate))
-	    aliasKey = aliasKey + 1
-
+	# delete fromID (from)
+	execProbeSQL = execProbeSQL + deleteProbeSQL % (fromKey)
 
     #	end of "for line in inputFile.readlines():"
 
