@@ -80,6 +80,8 @@ mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
 
+bcpon = 1  
+
 DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab
 CRT = '\n'		# carriage return/newline
@@ -332,16 +334,19 @@ def processFile():
         if error:
             continue
 
-	results = db.sql('''
+	sqlQuery = '''
 			 select a.accID, aa.accID
 			 from ACC_Accession a, GXD_ProbePrep p, GXD_Assay g, ACC_Accession aa
 			 where p._Probe_key = %s
 			 and p._ProbePrep_key = g._ProbePrep_key
 			 and g._Assay_key = aa._Object_key
 			 and aa._MGIType_key = 8
-			 ''' % (fromKey), 'auto')
-        for r in results:
-	    print fromID, toID, r 
+			 ''' % (fromKey)
+
+	#print sqlQuery
+	#results = db.sql(sqlQuery, 'auto')
+        #for r in results:
+	#    print fromID, toID, r 
 
 	# add alias using fromID name (from) to toID
         refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
