@@ -107,7 +107,7 @@ aliasKey = 0            # PRB_Alias._Alias_key
 
 mgiTypeKey = '3'
 updateAssaySQL = '''update GXD_ProbePrep set _Probe_key = %s where _Probe_key = %s\n'''
-updateRefSQL = '''update PRB_Reference set _Probe_key = %s where _Probe_key = %s\n'''
+updateRefSQL = '''update PRB_Reference set _Probe_key = %s where _Probe_key = %s and _Refs_key != %s\n'''
 deleteProbeSQL = '''delete PRB_Probe from PRB_Probe where _Probe_key = %s\n'''
 
 execAssaySQL = ''
@@ -330,37 +330,55 @@ def processFile():
             errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
             error = 1
 
+	# check that all genes are the same
+	checkGenesSQL = '''
+			select f.*
+			from PRB_Marker f, PRB_Marker t, GXD_ProbePrep p, GXD_Assay a
+			where f._Probe_key = %s
+			and t._Probe_key = %s
+			and p._Probe_key = %s
+			and p._ProbePrep_key = a._ProbePrep_key
+			and f._Marker_key = t._Marker_key
+			and f._Marker_key = a._Marker_key
+			''' % (fromKey, toKey, fromKey)
+
+	checkGenes = db.sql(checkGenesSQL, 'auto')
+        if len(checkGenes) == 0:
+            errorFile.write('Gene of GenePaint, Eurexpress and Assay are not the same:  %s, %s\n' % (fromID, toID))
+            error = 1
+
+	# check that the J: is on at least one Assay
+	checkJAssaySQL = '''
+			 select a.*
+			 from GXD_ProbePrep p, GXD_Assay a
+			 where p._Probe_key = %s
+			 and p._ProbePrep_key = a._ProbePrep_key
+			 and a._Refs_key = %s
+			 ''' % (fromKey, referenceKey)
+
+	checkJAssay = db.sql(checkJAssaySQL, 'auto')
+        if len(checkJAssay) == 0:
+            errorFile.write('J: is not on any Assays attached to the probe:  %s\n' % (fromID))
+            error = 1
+
         # if errors, continue to next record
         if error:
             continue
 
-	sqlQuery = '''
-			 select a.accID, aa.accID
-			 from ACC_Accession a, GXD_ProbePrep p, GXD_Assay g, ACC_Accession aa
-			 where p._Probe_key = %s
-			 and p._ProbePrep_key = g._ProbePrep_key
-			 and g._Assay_key = aa._Object_key
-			 and aa._MGIType_key = 8
-			 ''' % (fromKey)
-
-	#print sqlQuery
-	#results = db.sql(sqlQuery, 'auto')
-        #for r in results:
-	#    print fromID, toID, r 
-
 	# add alias using fromID name (from) to toID
+
         refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
         	% (refKey, toKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
-        refKey = refKey + 1
         aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
         	% (aliasKey, refKey, name, createdByKey, createdByKey, loaddate, loaddate))
+        refKey = refKey + 1
         aliasKey = aliasKey + 1
 
 	# move assay information from fromID to toID
 	execAssaySQL = execAssaySQL + updateAssaySQL % (toKey, fromKey)
 
 	# move fromID (from) references to toID
-	execRefSQL = execRefSQL + updateRefSQL % (toKey, fromKey)
+	execRefSQL = execRefSQL + updateRefSQL % (toKey, fromKey, referenceKey)
 
 	# delete fromID (from)
 	execProbeSQL = execProbeSQL + deleteProbeSQL % (fromKey)
