@@ -1,5 +1,12 @@
+TAG: probeload-4-3-2-10
+DATE: 02/23/2010,
+STAFF: lec
+CHANGES:
+1) TR9931/probereference.py
+   either use existing probe/reference or create a new one
+
 TAG: probeload-4-3-2-9
-DATE: 02/18/2010
+DATE: 02/18/2010,
 STAFF: lec
 CHANGES:
 1) TR9931/probeassay.py

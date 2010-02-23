@@ -237,8 +237,6 @@ def verifyProbeReference(
         probereferenceKey = r['_Reference_key']
 
     if probereferenceKey is None:
-        if errorFile != None:
-            errorFile.write('Invalid Probe Reference (%d) %s, %s\n' % (lineNum, probeID, referenceID))
         probereferenceKey = 0
 
     return probereferenceKey
@@ -317,16 +315,9 @@ def processFile():
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
         probeKey = loadlib.verifyProbe(probeID, lineNum, errorFile)
+        probeReferenceKey = verifyProbeReference(probeID, jnum, lineNum, errorFile)
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
 	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
-
-	# use the existing probe-reference key
-
-        if mode in ('preview-noreference', 'load-noreference'):
-            probeReferenceKey = verifyProbeReference(probeID, jnum, lineNum, errorFile)
-	    aliasrefKey = probeReferenceKey
-        else:
-	    probeReferenceKey = None
 
 	if probeKey == 0:
 	    errorFile.write('Invalid Probe:  %s\n' % (probeID))
@@ -336,9 +327,9 @@ def processFile():
 	    errorFile.write('Invalid Reference:  %s\n' % (jnum))
 	    error = 1
 
-	if probeReferenceKey == 0:
-	    errorFile.write('Invalid Probe Reference:  %s, %s\n' % (probeID, jnum))
-	    error = 1
+	#if probeReferenceKey == 0:
+	#    errorFile.write('Invalid Probe Reference:  %s, %s\n' % (probeID, jnum))
+	#    error = 1
 
 	if createdByKey == 0:
 	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
@@ -350,13 +341,16 @@ def processFile():
 
         # if no errors, process
 
-	# create a new probe-reference key
+	# create a new probe-reference key if one does not already exist
+	# else use the existing probe-reference key
 
-        if mode in ('preview', 'load'):
+        if probeReferenceKey == 0:
             refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
 		    % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
-	    aliasrefKey = refKey
+	    aliasrefKey = refsKey
 	    refKey = refKey + 1
+        else:
+	    aliasrefKey = probeReferenceKey
 
         # aliases
 
