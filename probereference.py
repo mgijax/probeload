@@ -347,7 +347,7 @@ def processFile():
         if probeReferenceKey == 0:
             refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
 		    % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
-	    aliasrefKey = refsKey
+	    aliasrefKey = refKey
 	    refKey = refKey + 1
         else:
 	    aliasrefKey = probeReferenceKey
