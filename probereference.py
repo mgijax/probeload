@@ -355,6 +355,10 @@ def processFile():
         # aliases
 
         for alias in aliasList:
+
+	    if len(alias) == 0:
+		continue
+
             aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
 		    % (aliasKey, aliasrefKey, alias, createdByKey, createdByKey, loaddate, loaddate))
 	    aliasKey = aliasKey + 1
