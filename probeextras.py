@@ -320,7 +320,8 @@ def processFile():
 
 	results = db.sql('''select _Reference_key from PRB_Reference
 		where _Probe_key = %s
-		''' % (probeKey), 'auto')
+		and _Refs_key = %s
+		''' % (probeKey, refsKey), 'auto')
         referenceKey = results[0]['_Reference_key']
 	if referenceKey == 0:
 	    errorFile.write('Invalid Probe/Reference:  %s\n' % (jnum))
