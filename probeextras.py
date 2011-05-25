@@ -255,7 +255,8 @@ def bcpFiles():
     aliasFile.close()
 
     # execute the sql deletions
-    db.sql(execSQL, None)
+    if execSQL != '':
+        db.sql(execSQL, None)
 
     bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
     bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
@@ -302,14 +303,14 @@ def processFile():
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
         probeKey = loadlib.verifyProbe(probeID, lineNum, errorFile)
-        referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
+        refsKey = loadlib.verifyReference(jnum, lineNum, errorFile)
 	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
 	if probeKey == 0:
 	    errorFile.write('Invalid Probe:  %s\n' % (probeID))
 	    error = 1
 
-	if referenceKey == 0:
+	if refsKey == 0:
 	    errorFile.write('Invalid Reference:  %s\n' % (jnum))
 	    error = 1
 
@@ -317,15 +318,26 @@ def processFile():
 	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
 	    error = 1
 
+	results = db.sql('''select _Reference_key from PRB_Reference
+		where _Probe_key = %s
+		''' % (probeKey), 'auto')
+        referenceKey = results[0]['_Reference_key']
+	if referenceKey == 0:
+	    errorFile.write('Invalid Probe/Reference:  %s\n' % (jnum))
+	    error = 1
+
 	# marker IDs
 
 	markerList = []
 	for markerID in markerIDs:
 
+	    if markerID == 'none':
+		break
+
 	    markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
 
 	    if markerKey == 0:
-	        errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
+	        errorFile.write('Invalid Marker:  %s\n' % (markerID))
 	        error = 1
             else:
 		markerList.append(markerKey)
@@ -339,13 +351,16 @@ def processFile():
 	for markerKey in markerList:
 	    if markerList.count(markerKey) == 1:
                 markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
-		    % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
+		    % (probeKey, markerKey, refsKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
 		execSQL = execSQL + deleteSQL % (probeKey, markerKey)
             else:
-		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
+		errorFile.write('Invalid Marker Duplicate:  %s\n' % (markerID))
 
-        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
-		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+	if referenceKey > 0:
+	    refKey = referenceKey
+	else:
+            refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
+		    % (refKey, probeKey, refsKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # aliases
 
@@ -354,6 +369,7 @@ def processFile():
 		    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
 	    aliasKey = aliasKey + 1
 
+	# only used if referenceKey == 0
 	refKey = refKey + 1
 
     #	end of "for line in inputFile.readlines():"
