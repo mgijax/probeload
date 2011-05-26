@@ -327,9 +327,9 @@ def processFile():
 	    errorFile.write('Invalid Reference:  %s\n' % (jnum))
 	    error = 1
 
-	if probeReferenceKey == 0:
-	    errorFile.write('Invalid Probe Reference:  %s, %s\n' % (probeID, jnum))
-	    error = 1
+	#if probeReferenceKey == 0:
+	#    errorFile.write('Invalid Probe Reference:  %s, %s\n' % (probeID, jnum))
+	#    error = 1
 
 	if createdByKey == 0:
 	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
