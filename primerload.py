@@ -27,7 +27,7 @@
 #
 #	A tab-delimited file in the format:
 #		field 1: Marker Symbol
-#		field 2: MGI Marker Accession ID
+#		field 2: MGI Marker Accession IDs (MGI:xxxx|MGI:xxxx)
 #		field 3: Primer Name
 #		field 4: Reference (J:#####)
 #		field 5: Region Covered
@@ -349,7 +349,7 @@ def processFile():
 
         try:
 	    markerSymbol = tokens[0]	# not used
-	    markerID = tokens[1]
+	    markerIDs = string.split(tokens[1], '|')
 	    name = tokens[2]
 	    jnum = tokens[3]
 	    regionCovered = tokens[4]
@@ -362,13 +362,21 @@ def processFile():
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
-	markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
+	# marker IDs
+
+	markerList = []
+	for markerID in markerIDs:
+
+	    markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
+
+	    if len(markerID) > 0 and markerKey == 0:
+	        errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
+	        error = 1
+            elif len(markerID) > 0:
+		markerList.append(markerKey)
+
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
 	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
-
-        if markerKey == 0 or referenceKey == 0:
-            # set error flag to true
-            error = 1
 
 	# sequence IDs
 	seqAccList = string.split(sequenceIDs, '|')
@@ -384,8 +392,14 @@ def processFile():
 	    mgi_utils.prvalue(sequence2), mgi_utils.prvalue(regionCovered), mgi_utils.prvalue(productSize), \
 	    createdByKey, createdByKey, loaddate, loaddate))
 
-        markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' % (primerKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate,
-	 loaddate))
+	for markerKey in markerList:
+	    if markerList.count(markerKey) == 1:
+                markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
+		    % (primerKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
+            else:
+		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
+
+	# loaddate))
 
         refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' % (refKey, primerKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
@@ -395,7 +409,7 @@ def processFile():
             % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, primerKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
 
 	newPrimerFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
-	   % (markerSymbol, markerID, name, jnum, regionCovered, sequence1, sequence2, productSize, notes, sequenceIDs, createdBy, mgiPrefix, mgiKey))
+	   % (markerSymbol, string.join(markerIDs, '|'), name, jnum, regionCovered, sequence1, sequence2, productSize, notes, sequenceIDs, createdBy, mgiPrefix, mgiKey))
 
         accKey = accKey + 1
         mgiKey = mgiKey + 1
