@@ -12,6 +12,7 @@
 #	PRB_Probe
 #	PRB_Marker
 #	PRB_Reference
+#	PRB_Alias
 #	ACC_Accession
 #	ACC_AccessionReference
 #	PRB_Notes
@@ -36,15 +37,17 @@
 #		field 8: Product Size
 #		field 9: Notes
 #               field 10: Nucleotide Sequence ID   (|-delimited)
-#               field 11: Created By
+#               field 11: Alias
+#               field 12: Created By
 #
 # Outputs:
 #
-#       6 BCP files:
+#       7 BCP files:
 #
 #       PRB_Probe.bcp                   master Primer records
 #	PRB_Marker.bcp			Primer/Marker records
 #       PRB_Reference.bcp         	Primer Reference records
+#	PRB_Alias.bcp
 #       ACC_Accession.bcp               Accession records
 #       ACC_AccessionReference.bcp      Accession Reference records
 #	PRB_Notes.bcp			Primer Notes
@@ -96,6 +99,7 @@ inputFile = ''		# file descriptor
 primerFile = ''         # file descriptor
 markerFile = ''		# file descriptor
 refFile = ''            # file descriptor
+aliasFile = ''          # file descriptor
 accFile = ''            # file descriptor
 accRefFile = ''         # file descriptor
 noteFile = ''		# file descriptor
@@ -103,6 +107,7 @@ noteFile = ''		# file descriptor
 primerTable = 'PRB_Probe'
 markerTable = 'PRB_Marker'
 refTable = 'PRB_Reference'
+aliasTable = 'PRB_Alias'
 accTable = 'ACC_Accession'
 accRefTable = 'ACC_AccessionReference'
 noteTable = 'PRB_Notes'
@@ -111,6 +116,7 @@ newPrimerFile = 'newPrimer.txt'
 primerFileName = outputDir + '/' + primerTable + '.bcp'
 markerFileName = outputDir + '/' + markerTable + '.bcp'
 refFileName = outputDir + '/' + refTable + '.bcp'
+aliasFileName = outputDir + '/' + aliasTable + '.bcp'
 accFileName = outputDir + '/' + accTable + '.bcp'
 accRefFileName = outputDir + '/' + accRefTable + '.bcp'
 noteFileName = outputDir + '/' + noteTable + '.bcp'
@@ -121,6 +127,7 @@ errorFileName = ''	# error file name
 
 primerKey = 0           # PRB_Probe._Probe_key
 refKey = 0		# PRB_Reference._Reference_key
+aliasKey = 0		# PRB_Reference._Reference_key
 accKey = 0              # ACC_Accession._Accession_key
 mgiKey = 0              # ACC_AccessionMax.maxNumericPart
 
@@ -173,7 +180,7 @@ def exit(
 
 def init():
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
-    global primerFile, markerFile, refFile, accFile, accRefFile, noteFile, newPrimerFile
+    global primerFile, markerFile, refFile, aliasFile, accFile, accRefFile, noteFile, newPrimerFile
  
     db.useOneConnection(1)
     db.set_sqlUser(user)
@@ -213,6 +220,11 @@ def init():
         refFile = open(refFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % refFileName)
+
+    try:
+        aliasFile = open(aliasFileName, 'w')
+    except:
+        exit(1, 'Could not open file %s\n' % aliasFileName)
 
     try:
         accFile = open(accFileName, 'w')
@@ -273,13 +285,16 @@ def verifyMode():
 
 def setPrimaryKeys():
 
-    global primerKey, refKey, accKey, mgiKey
+    global primerKey, refKey, aliasKey, accKey, mgiKey
 
     results = db.sql('select maxKey = max(_Probe_key) + 1 from PRB_Probe', 'auto')
     primerKey = results[0]['maxKey']
 
     results = db.sql('select maxKey = max(_Reference_key) + 1 from PRB_Reference', 'auto')
     refKey = results[0]['maxKey']
+
+    results = db.sql('select maxKey = max(_Alias_key) + 1 from PRB_Alias', 'auto')
+    aliasKey = results[0]['maxKey']
 
     results = db.sql('select maxKey = max(_Accession_key) + 1 from ACC_Accession', 'auto')
     accKey = results[0]['maxKey']
@@ -304,6 +319,7 @@ def bcpFiles():
     primerFile.close()
     markerFile.close()
     refFile.close()
+    aliasFile.close()
     accFile.close()
     accRefFile.close()
     noteFile.close()
@@ -315,11 +331,12 @@ def bcpFiles():
     bcp1 = '%s%s in %s %s' % (bcpI, primerTable, primerFileName, bcpII)
     bcp2 = '%s%s in %s %s' % (bcpI, markerTable, markerFileName, bcpII)
     bcp3 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
-    bcp4 = '%s%s in %s %s' % (bcpI, accTable, accFileName, bcpII)
-    bcp5 = '%s%s in %s %s' % (bcpI, accRefTable, accRefFileName, bcpII)
-    bcp6 = '%s%s in %s %s' % (bcpI, noteTable, noteFileName, bcpII)
+    bcp4 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
+    bcp5 = '%s%s in %s %s' % (bcpI, accTable, accFileName, bcpII)
+    bcp6 = '%s%s in %s %s' % (bcpI, accRefTable, accRefFileName, bcpII)
+    bcp7 = '%s%s in %s %s' % (bcpI, noteTable, noteFileName, bcpII)
 
-    for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6]:
+    for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6, bcp7]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
 #	db.sql(truncateDB, None)
@@ -334,7 +351,7 @@ def bcpFiles():
 
 def processFile():
 
-    global primerKey, refKey, accKey, mgiKey
+    global primerKey, refKey, aliasKey, accKey, mgiKey
 
     lineNum = 0
     # For each line in the input file
@@ -358,7 +375,8 @@ def processFile():
 	    productSize = tokens[7]
 	    notes = tokens[8]
 	    sequenceIDs = tokens[9]
-	    createdBy = tokens[10]
+	    aliasList = string.split(tokens[10], '|')
+	    createdBy = tokens[11]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
@@ -402,6 +420,15 @@ def processFile():
 	# loaddate))
 
         refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' % (refKey, primerKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+
+        # aliases
+
+        for alias in aliasList:
+            if len(alias) == 0:
+                continue
+            aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
+                    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
+            aliasKey = aliasKey + 1
 
         # MGI Accession ID for the marker
 
