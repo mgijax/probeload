@@ -6,8 +6,8 @@
 
 source `dirname $0`/Configuration
 
+# for both primer & probe
 setenv PROBEPRIMERDIR	/mgi/all/wts_projects/9400/9417
-
 setenv PRIMERDIR	${PROBEPRIMERDIR}/primerload
 setenv PROBEDIR		${PROBEPRIMERDIR}/probeload
 

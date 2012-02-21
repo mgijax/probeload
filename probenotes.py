@@ -185,7 +185,7 @@ def verifyMode():
 
     global DEBUG
 
-    if mode == 'preview':
+    if mode in ('preview', 'preview-notdeleted'):
         DEBUG = 1
         bcpon = 0
     elif mode not in ('load', 'load-notdeleted'):
@@ -208,7 +208,8 @@ def bcpFiles():
     notesFile.close()
 
     # execute the sql deletions
-    db.sql(execSQL, None)
+    if len(execSQL) > 0:
+        db.sql(execSQL, None)
 
     bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
     bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
@@ -268,12 +269,12 @@ def processFile():
 
         # Notes
 
+        noteSeq = 1
+
 	# automatically deletes any existing notes for this probe
         if mode in ('preview', 'load'):
 	    execSQL = execSQL + deleteSQL % (probeKey)
 
-        noteSeq = 1
-      
         while len(notes) > 255:
             notesFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes[:255], loaddate, loaddate))
             newnote = notes[255:]
