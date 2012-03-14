@@ -47,7 +47,8 @@
 #		field 18: Sequence ID		LogicalDB:Acc ID|...
 #		field 19: Alias			allows null
 #		field 20: Notes			allows null
-#		field 21: Created By		required
+#		field 21: Raw Sequence Note	allows null
+#		field 22: Created By		required
 #
 # 	If Parent is not null, then set Source Name = Source Name of Parent Probe
 #	Parent overrides Source
@@ -78,6 +79,9 @@
 # Implementation:
 #
 # History
+#
+# 03/13/2012	lec
+#	- TR10976/add rawNotes
 #
 # 12/16/2009	lec
 #	- TR9931/Eurexpress/add field 3/Parent Probe (derivedFrom)
@@ -131,6 +135,7 @@ accTable = 'ACC_Accession'
 accRefTable = 'ACC_AccessionReference'
 noteTable = 'PRB_Notes'
 newProbeFile = 'newProbe.txt'
+rawNoteFile = 'rawNote.txt'
 
 probeFileName = outputDir + '/' + probeTable + '.bcp'
 markerFileName = outputDir + '/' + markerTable + '.bcp'
@@ -140,6 +145,7 @@ accFileName = outputDir + '/' + accTable + '.bcp'
 accRefFileName = outputDir + '/' + accRefTable + '.bcp'
 noteFileName = outputDir + '/' + noteTable + '.bcp'
 newProbeFileName = outputDir + '/' + newProbeFile
+rawNoteFileName = outputDir + '/' + rawNoteFile
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -191,7 +197,8 @@ def exit(
 
 def init():
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
-    global probeFile, markerFile, refFile, aliasFile, accFile, accRefFile, noteFile, newProbeFile
+    global probeFile, markerFile, refFile, aliasFile, accFile, accRefFile, noteFile
+    global newProbeFile, rawNoteFile
  
     db.useOneConnection(1)
     db.set_sqlUser(user)
@@ -256,6 +263,11 @@ def init():
         newProbeFile = open(newProbeFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % newProbeFileName)
+
+    try:
+        rawNoteFile = open(rawNoteFileName, 'w')
+    except:
+        exit(1, 'Could not open file %s\n' % rawNoteFileName)
 
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
@@ -371,6 +383,8 @@ def bcpFiles():
     accFile.close()
     accRefFile.close()
     noteFile.close()
+    newProbeFile.close()
+    rawNoteFile.close()
 
     bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
     bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
@@ -431,7 +445,8 @@ def processFile():
 	    sequenceIDs = tokens[17]
 	    aliasList = string.split(tokens[18], '|')
 	    notes = tokens[19]
-	    createdBy = tokens[20]
+	    rawnotes = tokens[20]
+	    createdBy = tokens[21]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
@@ -569,6 +584,11 @@ def processFile():
 	    string.join(aliasList, '|'), \
 	    mgi_utils.prvalue(notes), \
 	    createdBy, mgiPrefix, mgiKey))
+
+	# Print out a raw note file
+
+        if len(rawnotes) > 0:
+            rawNoteFile.write('%s%d\t%s\n' % (mgiPrefix, mgiKey, rawnotes))
 
 	# Notes
 
