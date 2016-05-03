@@ -269,18 +269,11 @@ def processFile():
 
         # Notes
 
-        noteSeq = 1
-
 	# automatically deletes any existing notes for this probe
         if mode in ('preview', 'load'):
 	    execSQL = execSQL + deleteSQL % (probeKey)
 
-        while len(notes) > 255:
-            notesFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes[:255], loaddate, loaddate))
-            newnote = notes[255:]
-            notes = newnote
-            noteSeq = noteSeq + 1
-
+        noteSeq = 1
         if len(notes) > 0:
             notesFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes, loaddate, loaddate))
 
