@@ -75,8 +75,9 @@ import sourceloadlib
 # from configuration file
 #
 user = os.environ['PG_DBUSER']
-passwordFileName = os.environ['PG_DBPASSWORDFILE']
+passwordFileName = os.environ['PG_1LINE_PASSFILE']
 mode = os.environ['PROBELOADMODE']
+currentDir = os.environ['PROBELOADDIR']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
 
@@ -96,8 +97,8 @@ aliasFile = ''          # file descriptor
 refTable = 'PRB_Reference'
 aliasTable = 'PRB_Alias'
 
-refFileName = outputDir + '/' + refTable + '.bcp'
-aliasFileName = outputDir + '/' + aliasTable + '.bcp'
+refFileName = refTable + '.bcp'
+aliasFileName = aliasTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -265,7 +266,6 @@ def bcpFiles():
     db.commit()
 
     bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
-    currentDir = os.getcwd()
 
     bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
         (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), refTable, currentDir, refFileName)

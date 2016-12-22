@@ -105,7 +105,8 @@ import sourceloadlib
 # from configuration file
 #
 user = os.environ['PG_DBUSER']
-passwordFileName = os.environ['PG_DBPASSWORDFILE']
+passwordFileName = os.environ['PG_1LINE_PASSFILE']
+currentDir = os.environ['PROBELOADDIR']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
@@ -137,15 +138,15 @@ noteTable = 'PRB_Notes'
 newProbeFile = 'newProbe.txt'
 rawNoteFile = 'rawNote.txt'
 
-probeFileName = outputDir + '/' + probeTable + '.bcp'
-markerFileName = outputDir + '/' + markerTable + '.bcp'
-refFileName = outputDir + '/' + refTable + '.bcp'
-aliasFileName = outputDir + '/' + aliasTable + '.bcp'
-accFileName = outputDir + '/' + accTable + '.bcp'
-accRefFileName = outputDir + '/' + accRefTable + '.bcp'
-noteFileName = outputDir + '/' + noteTable + '.bcp'
-newProbeFileName = outputDir + '/' + newProbeFile
-rawNoteFileName = outputDir + '/' + rawNoteFile
+probeFileName = probeTable + '.bcp'
+markerFileName = markerTable + '.bcp'
+refFileName = refTable + '.bcp'
+aliasFileName = aliasTable + '.bcp'
+accFileName = accTable + '.bcp'
+accRefFileName = accRefTable + '.bcp'
+noteFileName = noteTable + '.bcp'
+newProbeFileName = newProbeFile
+rawNoteFileName = rawNoteFile
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -383,7 +384,6 @@ def bcpFiles():
     db.commit()
 
     bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
-    currentDir = os.getcwd()
 
     bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
         (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), probeTable, currentDir, probeFileName)

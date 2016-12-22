@@ -82,8 +82,9 @@ import loadlib
 # from configuration file
 #
 user = os.environ['PG_DBUSER']
-passwordFileName = os.environ['PG_DBPASSWORDFILE']
+passwordFileName = os.environ['PG_1LINE_PASSFILE']
 mode = os.environ['PRIMERMODE']
+currentDir = os.environ['PRIMERLOADDIR']
 inputFileName = os.environ['PRIMERDATAFILE']
 outputDir = os.environ['OUTPUTDIR']
 
@@ -113,14 +114,14 @@ accRefTable = 'ACC_AccessionReference'
 noteTable = 'PRB_Notes'
 newPrimerFile = 'newPrimer.txt'
 
-primerFileName = outputDir + '/' + primerTable + '.bcp'
-markerFileName = outputDir + '/' + markerTable + '.bcp'
-refFileName = outputDir + '/' + refTable + '.bcp'
-aliasFileName = outputDir + '/' + aliasTable + '.bcp'
-accFileName = outputDir + '/' + accTable + '.bcp'
-accRefFileName = outputDir + '/' + accRefTable + '.bcp'
-noteFileName = outputDir + '/' + noteTable + '.bcp'
-newPrimerFileName = outputDir + '/' + newPrimerFile
+primerFileName = primerTable + '.bcp'
+markerFileName = markerTable + '.bcp'
+refFileName = refTable + '.bcp'
+aliasFileName = aliasTable + '.bcp'
+accFileName = accTable + '.bcp'
+accRefFileName = accRefTable + '.bcp'
+noteFileName = noteTable + '.bcp'
+newPrimerFileName = newPrimerFile
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -322,7 +323,6 @@ def bcpFiles():
     db.commit()
 
     bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
-    currentDir = os.getcwd()
 
     bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
         (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), primerTable, currentDir, primerFileName)

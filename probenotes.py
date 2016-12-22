@@ -64,8 +64,9 @@ import loadlib
 # from configuration file
 #
 user = os.environ['PG_DBUSER']
-passwordFileName = os.environ['PG_DBPASSWORDFILE']
+passwordFileName = os.environ['PG_1LINE_PASSFILE']
 mode = os.environ['PROBELOADMODE']
+currentDir = os.environ['PROBELOADDIR']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
 
@@ -82,7 +83,7 @@ notesFile = ''		# file descriptor
 
 notesTable = 'PRB_Notes'
 
-notesFileName = outputDir + '/' + notesTable + '.bcp'
+notesFileName = notesTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -90,9 +91,8 @@ errorFileName = ''	# error file name
 loaddate = loadlib.loaddate
 
 # delete the probe/notes so we can add new ones
-deleteSQL = 'delete from PRB_Notes where _Probe_key = %s;'
-
-execSQL = ''
+deleteSQL = 'delete from PRB_Notes where _Probe_key = %s'
+execSQL = []
 
 # Purpose: prints error message and exits
 # Returns: nothing
@@ -196,7 +196,7 @@ def verifyMode():
 
 def bcpFiles():
 
-    diagFile.write(execSQL)
+    diagFile.write(str(execSQL))
 
     if DEBUG or not bcpon:
         return
@@ -206,14 +206,14 @@ def bcpFiles():
     db.commit()
 
     # execute the sql deletions
-    if len(execSQL) > 0:
-        db.sql(execSQL, None)
+    for r in execSQL:
+        db.sql(r, None)
+    db.commit()
 
     bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
-    currentDir = os.getcwd()
 
     bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), noteTable, currentDir, noteFileName)
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), notesTable, currentDir, notesFileName)
 
     for bcpCmd in [bcp1]:
 	diagFile.write('%s\n' % bcpCmd)
@@ -272,7 +272,7 @@ def processFile():
 
 	# automatically deletes any existing notes for this probe
         if mode in ('preview', 'load'):
-	    execSQL = execSQL + deleteSQL % (probeKey)
+	    execSQL.append(deleteSQL % (probeKey))
 
         noteSeq = 1
         if len(notes) > 0:

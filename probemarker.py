@@ -66,7 +66,8 @@ import loadlib
 # from configuration file
 #
 user = os.environ['PG_DBUSER']
-passwordFileName = os.environ['PG_DBPASSWORDFILE']
+passwordFileName = os.environ['PG_1LINE_PASSFILE']
+currentDir = os.environ['PROBELOADDIR']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
@@ -84,7 +85,7 @@ markerFile = ''		# file descriptor
 
 markerTable = 'PRB_Marker'
 
-markerFileName = outputDir + '/' + markerTable + '.bcp'
+markerFileName = markerTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -92,9 +93,8 @@ errorFileName = ''	# error file name
 loaddate = loadlib.loaddate
 
 # delete the probe/marker relationships so we can add new ones
-deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s;'
-
-execSQL = ''
+deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s'
+execSQL = []
 
 # Purpose: prints error message and exits
 # Returns: nothing
@@ -198,7 +198,7 @@ def verifyMode():
 
 def bcpFiles():
 
-    diagFile.write(execSQL)
+    diagFile.write(str(execSQL))
 
     if DEBUG or not bcpon:
         return
@@ -208,13 +208,13 @@ def bcpFiles():
     db.commit()
 
     bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
-    currentDir = os.getcwd()
 
     bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
         (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), markerTable, currentDir, markerFileName)
 
     # execute the sql deletions
-    db.sql(execSQL, None)
+    for r in execSQL:
+        db.sql(r, None)
 
     for bcpCmd in [bcp1]:
 	diagFile.write('%s\n' % bcpCmd)
@@ -293,7 +293,7 @@ def processFile():
 	    if markerList.count(markerKey) == 1:
                 markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
 		    % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
-		execSQL = execSQL + deleteSQL % (probeKey, markerKey)
+		execSQL.append(deleteSQL % (probeKey, markerKey))
             else:
 		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 

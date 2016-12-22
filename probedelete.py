@@ -59,7 +59,8 @@ import sourceloadlib
 # from configuration file
 #
 user = os.environ['PG_DBUSER']
-passwordFileName = os.environ['PG_DBPASSWORDFILE']
+passwordFileName = os.environ['PG_1LINE_PASSFILE']
+currentDir = os.environ['PROBELOADDIR']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']

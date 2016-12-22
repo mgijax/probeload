@@ -75,7 +75,8 @@ import loadlib
 # from configuration file
 #
 user = os.environ['PG_DBUSER']
-passwordFileName = os.environ['PG_DBPASSWORDFILE']
+passwordFileName = os.environ['PG_1LINE_PASSFILE']
+currentDir = os.environ['PROBELOADDIR']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
@@ -97,9 +98,9 @@ markerTable = 'PRB_Marker'
 refTable = 'PRB_Reference'
 aliasTable = 'PRB_Alias'
 
-markerFileName = outputDir + '/' + markerTable + '.bcp'
-refFileName = outputDir + '/' + refTable + '.bcp'
-aliasFileName = outputDir + '/' + aliasTable + '.bcp'
+markerFileName = markerTable + '.bcp'
+refFileName = refTable + '.bcp'
+aliasFileName = aliasTable + '.bcp'
 
 diagFileName = ''	# diagnostic file name
 errorFileName = ''	# error file name
@@ -110,8 +111,8 @@ aliasKey = 0		# PRB_Alias._Alias_key
 loaddate = loadlib.loaddate
 
 # delete the probe/marker relationships so we can add new ones
-deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s;'
-execSQL = ''
+deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s'
+execSQL = []
 
 # Purpose: prints error message and exits
 # Returns: nothing
@@ -252,7 +253,6 @@ def bcpFiles():
     db.commit()
 
     bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
-    currentDir = os.getcwd()
 
     bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
         (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), markerTable, currentDir, markerFileName)
@@ -264,8 +264,8 @@ def bcpFiles():
         (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), aliasTable, currentDir, aliasFileName)
 
     # execute the sql deletions
-    if execSQL != '':
-        db.sql(execSQL, None)
+    for r in execSQL:
+        db.sql(r, None)
 
     for bcpCmd in [bcp1, bcp2, bcp3]:
 	diagFile.write('%s\n' % bcpCmd)
@@ -357,7 +357,7 @@ def processFile():
 	    if markerList.count(markerKey) == 1:
                 markerFile.write('%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\n' \
 		    % (probeKey, markerKey, refsKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
-		execSQL = execSQL + deleteSQL % (probeKey, markerKey)
+		execSQL.append(deleteSQL % (probeKey, markerKey))
             else:
 		errorFile.write('Invalid Marker Duplicate:  %s\n' % (markerID))
 
