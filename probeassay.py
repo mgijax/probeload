@@ -107,13 +107,13 @@ refKey = 0              # PRB_Reference._Reference_key
 aliasKey = 0            # PRB_Alias._Alias_key
 
 mgiTypeKey = '3'
-updateAssaySQL = '''update GXD_ProbePrep set _Probe_key = %s where _Probe_key = %s;'''
-updateRefSQL = '''update PRB_Reference set _Probe_key = %s where _Probe_key = %s and _Refs_key != %s;'''
-deleteProbeSQL = '''delete PRB_Probe from PRB_Probe where _Probe_key = %s;'''
+updateAssaySQL = '''update GXD_ProbePrep set _Probe_key = %s where _Probe_key = %s'''
+updateRefSQL = '''update PRB_Reference set _Probe_key = %s where _Probe_key = %s and _Refs_key != %s'''
+deleteProbeSQL = '''delete PRB_Probe from PRB_Probe where _Probe_key = %s'''
 
-execAssaySQL = ''
-execRefSQL = ''
-execProbeSQL = ''
+execAssaySQL = []
+execRefSQL = []
+execProbeSQL = []
 
 loaddate = loadlib.loaddate
 
@@ -255,7 +255,8 @@ def bcpFiles():
     # execute the sql commands
 
     # move assay information from fromID to toID
-    db.sql(execAssaySQL, None)
+    for r in execAssaySQL:
+        db.sql(r, None)
 
     # move fromID (from) references to toID
     db.sql(execRefSQL, None)
@@ -380,13 +381,13 @@ def processFile():
         aliasKey = aliasKey + 1
 
 	# move assay information from fromID to toID
-	execAssaySQL = execAssaySQL + updateAssaySQL % (toKey, fromKey)
+	execAssaySQL.append(updateAssaySQL % (toKey, fromKey))
 
 	# move fromID (from) references to toID
-	execRefSQL = execRefSQL + updateRefSQL % (toKey, fromKey, referenceKey)
+	execRefSQL.append(updateRefSQL % (toKey, fromKey, referenceKey))
 
 	# delete fromID (from)
-	execProbeSQL = execProbeSQL + deleteProbeSQL % (fromKey)
+	execProbeSQL.append(deleteProbeSQL % (fromKey))
 
     #	end of "for line in inputFile.readlines():"
 
