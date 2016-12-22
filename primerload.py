@@ -328,17 +328,11 @@ def bcpFiles():
     db.commit()
 
     bcp1 = bcpCommand % (primerTable, primerFileName)
-
     bcp2 = bcpCommand % (markerTable, markerFileName)
-
     bcp3 = bcpCommand % (refTable, refFileName)
-
     bcp4 = bcpCommand % (aliasTable, aliasFileName)
-
     bcp5 = bcpCommand % (accTable, accFileName)
-
     bcp6 = bcpCommand % (accTable, accFileName)
-
     bcp7 = bcpCommand % (noteTable, noteFileName)
 
     for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6, bcp7]:
