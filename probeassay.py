@@ -74,8 +74,8 @@ import sourceloadlib
 #
 # from configuration file
 #
-user = os.environ['MGD_DBUSER']
-passwordFileName = os.environ['MGD_DBPASSWORDFILE']
+user = os.environ['PG_DBUSER']
+passwordFileName = os.environ['PG_DBPASSWORDFILE']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
@@ -106,9 +106,9 @@ refKey = 0              # PRB_Reference._Reference_key
 aliasKey = 0            # PRB_Alias._Alias_key
 
 mgiTypeKey = '3'
-updateAssaySQL = '''update GXD_ProbePrep set _Probe_key = %s where _Probe_key = %s\n'''
-updateRefSQL = '''update PRB_Reference set _Probe_key = %s where _Probe_key = %s and _Refs_key != %s\n'''
-deleteProbeSQL = '''delete PRB_Probe from PRB_Probe where _Probe_key = %s\n'''
+updateAssaySQL = '''update GXD_ProbePrep set _Probe_key = %s where _Probe_key = %s;'''
+updateRefSQL = '''update PRB_Reference set _Probe_key = %s where _Probe_key = %s and _Refs_key != %s;'''
+deleteProbeSQL = '''delete PRB_Probe from PRB_Probe where _Probe_key = %s;'''
 
 execAssaySQL = ''
 execRefSQL = ''
@@ -190,9 +190,6 @@ def init():
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
 
-    # Set Log File Descriptor
-    db.set_sqlLogFD(diagFile)
-
     diagFile.write('Start Date/Time: %s\n' % (mgi_utils.date()))
     diagFile.write('Server: %s\n' % (db.get_sqlServer()))
     diagFile.write('Database: %s\n' % (db.get_sqlDatabase()))
@@ -242,7 +239,6 @@ def setPrimaryKeys():
 
 def bcpFiles():
 
-    bcpdelim = "|"
     diagFile.write(execAssaySQL)
     diagFile.write(execRefSQL)
     diagFile.write(execProbeSQL)
@@ -252,6 +248,8 @@ def bcpFiles():
 
     refFile.close()
     aliasFile.close()
+
+    db.commit()
 
     # execute the sql commands
 
@@ -264,15 +262,22 @@ def bcpFiles():
     # delete fromID (from)
     db.sql(execProbeSQL, None)
 
-    bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
-    bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
+    db.commit()
 
-    bcp1 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
-    bcp2 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
+    bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
+    currentDir = os.getcwd()
+
+    bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), refTable, currentDir, refFileName)
+
+    bcp2 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), aliasTable, currentDir, aliasFileName)
 
     for bcpCmd in [bcp1, bcp2]:
         diagFile.write('%s\n' % bcpCmd)
         os.system(bcpCmd)
+
+    db.commit()
 
     return
 
@@ -367,9 +372,9 @@ def processFile():
 
 	# add alias using fromID name (from) to toID
 
-        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
+        refFile.write('%s\t%s\t%s|0|0\t%s\t%s\t%s\t%s\n' \
         	% (refKey, toKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
-        aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
+        aliasFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         	% (aliasKey, refKey, name, createdByKey, createdByKey, loaddate, loaddate))
         refKey = refKey + 1
         aliasKey = aliasKey + 1

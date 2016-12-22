@@ -104,8 +104,8 @@ import sourceloadlib
 #
 # from configuration file
 #
-user = os.environ['MGD_DBUSER']
-passwordFileName = os.environ['MGD_DBPASSWORDFILE']
+user = os.environ['PG_DBUSER']
+passwordFileName = os.environ['PG_DBPASSWORDFILE']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
@@ -272,9 +272,6 @@ def init():
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
 
-    # Set Log File Descriptor
-    db.set_sqlLogFD(diagFile)
-
     diagFile.write('Start Date/Time: %s\n' % (mgi_utils.date()))
     diagFile.write('Server: %s\n' % (db.get_sqlServer()))
     diagFile.write('Database: %s\n' % (db.get_sqlDatabase()))
@@ -321,7 +318,7 @@ def verifyParentProbe(
     results = db.sql('''
         	select a._Object_key, p._Source_key 
 		from ACC_Accession a, PRB_Probe p 
-		where a.accID = "%s"
+		where a.accID = '%s'
 		and a._MGIType_key = 3
 		and a._Object_key = p._Probe_key
 		''' % (probeID), 'auto')
@@ -347,20 +344,19 @@ def setPrimaryKeys():
 
     global probeKey, refKey, aliasKey, accKey, mgiKey
 
-    results = db.sql('select maxKey = max(_Probe_key) + 1 from PRB_Probe', 'auto')
+    results = db.sql('select max(_Probe_key) + 1 as maxKey from PRB_Probe', 'auto')
     probeKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = max(_Reference_key) + 1 from PRB_Reference', 'auto')
+    results = db.sql('select max(_Reference_key) + 1 as maxKey from PRB_Reference', 'auto')
     refKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = max(_Alias_key) + 1 from PRB_Alias', 'auto')
+    results = db.sql('select max(_Alias_key) + 1 as maxKey from PRB_Alias', 'auto')
     aliasKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = max(_Accession_key) + 1 from ACC_Accession', 'auto')
+    results = db.sql('select max(_Accession_key) + 1 as maxKey from ACC_Accession', 'auto')
     accKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = maxNumericPart + 1 from ACC_AccessionMax ' + \
-        'where prefixPart = "%s"' % (mgiPrefix), 'auto')
+    results = db.sql('''select maxNumericPart + 1 as maxKey from ACC_AccessionMax where prefixPart = '%s' ''' % (mgiPrefix), 'auto')
     mgiKey = results[0]['maxKey']
 
 # Purpose:  BCPs the data into the database
@@ -370,8 +366,6 @@ def setPrimaryKeys():
 # Throws:   nothing
 
 def bcpFiles():
-
-    bcpdelim = "|"
 
     if DEBUG or not bcpon:
         return
@@ -386,20 +380,37 @@ def bcpFiles():
     newProbeFile.close()
     rawNoteFile.close()
 
-    bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
-    bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
+    db.commit()
 
-    bcp1 = '%s%s in %s %s' % (bcpI, probeTable, probeFileName, bcpII)
-    bcp2 = '%s%s in %s %s' % (bcpI, markerTable, markerFileName, bcpII)
-    bcp3 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
-    bcp4 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
-    bcp5 = '%s%s in %s %s' % (bcpI, accTable, accFileName, bcpII)
-    bcp6 = '%s%s in %s %s' % (bcpI, accRefTable, accRefFileName, bcpII)
-    bcp7 = '%s%s in %s %s' % (bcpI, noteTable, noteFileName, bcpII)
+    bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
+    currentDir = os.getcwd()
+
+    bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), probeTable, currentDir, probeFileName)
+
+    bcp2 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), markerTable, currentDir, markerFileName)
+
+    bcp3 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), refTable, currentDir, refFileName)
+
+    bcp4 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), aliasTable, currentDir, aliasFileName)
+
+    bcp5 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), accTable, currentDir, accFileName)
+
+    bcp6 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), accRefrobeTable, currentDir, accRefFileName)
+
+    bcp7 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), noteTable, currentDir, noteFileName)
 
     for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6, bcp7]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
+
+    db.commit()
 
     return
 
@@ -534,18 +545,18 @@ def processFile():
 
         # if no errors, process the probe
 
-        probeFile.write('%d|%s|%s|%s|%s|%s|||%s|%s|%s||%s|%s|%s|%s\n' \
+        probeFile.write('%d\t%s\t%s\t%s\t%s\t%s||\t%s\t%s\t%s|\t%s\t%s\t%s\t%s\n' \
             % (probeKey, name, parentProbeKey, sourceKey, vectorKey, segmentTypeKey, mgi_utils.prvalue(regionCovered), \
 	    mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), createdByKey, createdByKey, loaddate, loaddate))
 
 	for markerKey in markerList:
 	    if markerList.count(markerKey) == 1:
-                markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
+                markerFile.write('%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\n' \
 		    % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
             else:
 		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
-        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
+        refFile.write('%s\t%s\t%s|0|0\t%s\t%s\t%s\t%s\n' \
 		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # aliases
@@ -553,13 +564,13 @@ def processFile():
         for alias in aliasList:
 	    if len(alias) == 0:
 		continue
-            aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
+            aliasFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
 		    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
 	    aliasKey = aliasKey + 1
 
         # MGI Accession ID for the marker
 
-        accFile.write('%s|%s%d|%s|%s|1|%d|%d|0|1|%s|%s|%s|%s\n' \
+        accFile.write('%s\t%s%d\t%s\t%s|1\t%d\t%d|0|1\t%s\t%s\t%s\t%s\n' \
             % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
 
 	# Print out a new text file and attach the new MGI Probe IDs as the last field
@@ -594,7 +605,7 @@ def processFile():
 
         noteSeq = 1
         if len(notes) > 0:
-	    noteFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes, loaddate, loaddate))
+	    noteFile.write('%s\t%d\t%s\t%s\t%s\n' % (probeKey, noteSeq, notes, loaddate, loaddate))
 
         accKey = accKey + 1
         mgiKey = mgiKey + 1
@@ -602,9 +613,9 @@ def processFile():
 	# sequence accession ids
 	for acc in seqAccDict.keys():
 	    prefixPart, numericPart = accessionlib.split_accnum(acc)
-            accFile.write('%s|%s|%s|%s|%s|%d|%d|0|1|%s|%s|%s|%s\n' \
+            accFile.write('%s\t%s\t%s\t%s\t%s\t%d\t%d|0|1\t%s\t%s\t%s\t%s\n' \
                 % (accKey, acc, prefixPart, numericPart, seqAccDict[acc], probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
-            accRefFile.write('%s|%s|%s|%s|%s|%s\n' \
+            accRefFile.write('%s\t%s\t%s\t%s\t%s\t%s\n' \
                 % (accKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 	    accKey = accKey + 1
 

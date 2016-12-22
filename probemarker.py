@@ -65,8 +65,8 @@ import loadlib
 #
 # from configuration file
 #
-user = os.environ['MGD_DBUSER']
-passwordFileName = os.environ['MGD_DBPASSWORDFILE']
+user = os.environ['PG_DBUSER']
+passwordFileName = os.environ['PG_DBPASSWORDFILE']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
@@ -92,7 +92,7 @@ errorFileName = ''	# error file name
 loaddate = loadlib.loaddate
 
 # delete the probe/marker relationships so we can add new ones
-deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s\n'
+deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s;'
 
 execSQL = ''
 
@@ -165,9 +165,6 @@ def init():
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
 
-    # Set Log File Descriptor
-    db.set_sqlLogFD(diagFile)
-
     diagFile.write('Start Date/Time: %s\n' % (mgi_utils.date()))
     diagFile.write('Server: %s\n' % (db.get_sqlServer()))
     diagFile.write('Database: %s\n' % (db.get_sqlDatabase()))
@@ -201,7 +198,6 @@ def verifyMode():
 
 def bcpFiles():
 
-    bcpdelim = "|"
     diagFile.write(execSQL)
 
     if DEBUG or not bcpon:
@@ -209,17 +205,22 @@ def bcpFiles():
 
     markerFile.close()
 
+    db.commit()
+
+    bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
+    currentDir = os.getcwd()
+
+    bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), markerTable, currentDir, markerFileName)
+
     # execute the sql deletions
     db.sql(execSQL, None)
-
-    bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
-    bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
-
-    bcp1 = '%s%s in %s %s' % (bcpI, markerTable, markerFileName, bcpII)
 
     for bcpCmd in [bcp1]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
+
+    db.commit()
 
     return
 

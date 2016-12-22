@@ -73,8 +73,8 @@ import loadlib
 #
 # from configuration file
 #
-user = os.environ['MGD_DBUSER']
-passwordFileName = os.environ['MGD_DBPASSWORDFILE']
+user = os.environ['PG_DBUSER']
+passwordFileName = os.environ['PG_DBPASSWORDFILE']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
@@ -180,9 +180,6 @@ def init():
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
 
-    # Set Log File Descriptor
-    db.set_sqlLogFD(diagFile)
-
     diagFile.write('Start Date/Time: %s\n' % (mgi_utils.date()))
     diagFile.write('Server: %s\n' % (db.get_sqlServer()))
     diagFile.write('Database: %s\n' % (db.get_sqlDatabase()))
@@ -251,10 +248,10 @@ def setPrimaryKeys():
 
     global refKey, aliasKey
 
-    results = db.sql('select maxKey = max(_Reference_key) + 1 from PRB_Reference', 'auto')
+    results = db.sql('select max(_Reference_key) + 1 as maxKey from PRB_Reference', 'auto')
     refKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = max(_Alias_key) + 1 from PRB_Alias', 'auto')
+    results = db.sql('select max(_Alias_key) + 1 as maxKey from PRB_Alias', 'auto')
     aliasKey = results[0]['maxKey']
 
 # Purpose:  BCPs the data into the database
@@ -273,15 +270,22 @@ def bcpFiles():
     refFile.close()
     aliasFile.close()
 
-    bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
-    bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
+    db.commit()
 
-    bcp1 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
-    bcp2 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
+    bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
+    currentDir = os.getcwd()
+
+    bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), refTable, currentDir, refFileName)
+
+    bcp2 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), aliasTable, currentDir, aliasFileName)
 
     for bcpCmd in [bcp1, bcp2]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
+
+    db.commit()
 
     return
 
@@ -345,7 +349,7 @@ def processFile():
 	# else use the existing probe-reference key
 
         if probeReferenceKey == 0:
-            refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
+            refFile.write('%s\t%s\t%s|0|0\t%s\t%s\t%s\t%s\n' \
 		    % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 	    aliasrefKey = refKey
 	    refKey = refKey + 1
@@ -359,7 +363,7 @@ def processFile():
 	    if len(alias) == 0:
 		continue
 
-            aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
+            aliasFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
 		    % (aliasKey, aliasrefKey, alias, createdByKey, createdByKey, loaddate, loaddate))
 	    aliasKey = aliasKey + 1
 

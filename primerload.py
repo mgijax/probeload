@@ -81,8 +81,8 @@ import loadlib
 #
 # from configuration file
 #
-user = os.environ['MGD_DBUSER']
-passwordFileName = os.environ['MGD_DBPASSWORDFILE']
+user = os.environ['PG_DBUSER']
+passwordFileName = os.environ['PG_DBPASSWORDFILE']
 mode = os.environ['PRIMERMODE']
 inputFileName = os.environ['PRIMERDATAFILE']
 outputDir = os.environ['OUTPUTDIR']
@@ -249,9 +249,6 @@ def init():
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
 
-    # Set Log File Descriptor
-    db.set_sqlLogFD(diagFile)
-
     diagFile.write('Start Date/Time: %s\n' % (mgi_utils.date()))
     diagFile.write('Server: %s\n' % (db.get_sqlServer()))
     diagFile.write('Database: %s\n' % (db.get_sqlDatabase()))
@@ -287,19 +284,19 @@ def setPrimaryKeys():
 
     global primerKey, refKey, aliasKey, accKey, mgiKey
 
-    results = db.sql('select maxKey = max(_Probe_key) + 1 from PRB_Probe', 'auto')
+    results = db.sql('select max(_Probe_key) + 1 as maxKey from PRB_Probe', 'auto')
     primerKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = max(_Reference_key) + 1 from PRB_Reference', 'auto')
+    results = db.sql('select max(_Reference_key) + 1 as maxKey from PRB_Reference', 'auto')
     refKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = max(_Alias_key) + 1 from PRB_Alias', 'auto')
+    results = db.sql('select max(_Alias_key) + 1 as maxKey from PRB_Alias', 'auto')
     aliasKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = max(_Accession_key) + 1 from ACC_Accession', 'auto')
+    results = db.sql('select max(_Accession_key) + 1 as maxKey from ACC_Accession', 'auto')
     accKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = maxNumericPart + 1 from ACC_AccessionMax ' + \
+    results = db.sql('select maxNumericPart + 1 as maxKey from ACC_AccessionMax ' + \
         'where prefixPart = "%s"' % (mgiPrefix), 'auto')
     mgiKey = results[0]['maxKey']
 
@@ -310,8 +307,6 @@ def setPrimaryKeys():
 # Throws:   nothing
 
 def bcpFiles():
-
-    bcpdelim = "|"
 
     if DEBUG or not bcpon:
         return
@@ -324,22 +319,37 @@ def bcpFiles():
     accRefFile.close()
     noteFile.close()
 
-    bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
-    bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
-    truncateDB = 'dump transaction %s with truncate_only' % (db.get_sqlDatabase())
+    db.commit()
 
-    bcp1 = '%s%s in %s %s' % (bcpI, primerTable, primerFileName, bcpII)
-    bcp2 = '%s%s in %s %s' % (bcpI, markerTable, markerFileName, bcpII)
-    bcp3 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
-    bcp4 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
-    bcp5 = '%s%s in %s %s' % (bcpI, accTable, accFileName, bcpII)
-    bcp6 = '%s%s in %s %s' % (bcpI, accRefTable, accRefFileName, bcpII)
-    bcp7 = '%s%s in %s %s' % (bcpI, noteTable, noteFileName, bcpII)
+    bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
+    currentDir = os.getcwd()
+
+    bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), primerTable, currentDir, primerFileName)
+
+    bcp2 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), markerTable, currentDir, markerFileName)
+
+    bcp3 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), refTable, currentDir, refFileName)
+
+    bcp4 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), aliasTable, currentDir, aliasFileName)
+
+    bcp5 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), accTable, currentDir, accFileName)
+
+    bcp6 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), accRefTable, currentDir, accRefFileName)
+
+    bcp7 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), noteTable, currentDir, noteFileName)
 
     for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6, bcp7]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
-#	db.sql(truncateDB, None)
+
+    db.commit()
 
     return
 
@@ -405,34 +415,34 @@ def processFile():
 
         # if no errors, process the primer
 
-        primerFile.write('%d|%s||%d|%d|%s|%s|%s|%s|||%s|%s|%s|%s|%s\n' \
+        primerFile.write('%d\t%s||%d|%d\t%s\t%s\t%s\t%s||\t%s\t%s\t%s\t%s\t%s\n' \
             % (primerKey, name, NA, vectorKey, segmentTypeKey, mgi_utils.prvalue(sequence1), \
 	    mgi_utils.prvalue(sequence2), mgi_utils.prvalue(regionCovered), mgi_utils.prvalue(productSize), \
 	    createdByKey, createdByKey, loaddate, loaddate))
 
 	for markerKey in markerList:
 	    if markerList.count(markerKey) == 1:
-                markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
+                markerFile.write('%s\t%s|%d\t%s\t%s\t%s\t%s\t%s\n' \
 		    % (primerKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
             else:
 		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
 	# loaddate))
 
-        refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' % (refKey, primerKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+        refFile.write('%s\t%s\t%s|0|0\t%s\t%s\t%s\t%s\n' % (refKey, primerKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # aliases
 
         for alias in aliasList:
             if len(alias) == 0:
                 continue
-            aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
+            aliasFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
                     % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
             aliasKey = aliasKey + 1
 
         # MGI Accession ID for the marker
 
-        accFile.write('%s|%s%d|%s|%s|1|%d|%d|0|1|%s|%s|%s|%s\n' \
+        accFile.write('%s\t%s%d\t%s\t%s|1|%d|%d|0|1\t%s\t%s\t%s\t%s\n' \
             % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, primerKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
 
 	newPrimerFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
@@ -448,16 +458,16 @@ def processFile():
 		continue
 
 	    prefixPart, numericPart = accessionlib.split_accnum(acc)
-            accFile.write('%s|%s|%s|%s|%s|%d|%d|0|1|%s|%s|%s|%s\n' \
+            accFile.write('%s\t%s\t%s\t%s\t%s|%d|%d|0|1\t%s\t%s\t%s\t%s\n' \
                 % (accKey, acc, prefixPart, numericPart, logicalDBKey, primerKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
-            accRefFile.write('%s|%s|%s|%s|%s|%s\n' \
+            accRefFile.write('%s\t%s\t%s\t%s\t%s\t%s\n' \
                 % (accKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 	    accKey = accKey + 1
 
 	# notes
 
 	if len(notes) > 0:
-	   noteFile.write('%s|1|%s|%s|%s\n' \
+	   noteFile.write('%s|1\t%s\t%s\t%s\n' \
 		% (primerKey, notes, loaddate, loaddate))
 
 	refKey = refKey + 1

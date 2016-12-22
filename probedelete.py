@@ -58,8 +58,8 @@ import sourceloadlib
 #
 # from configuration file
 #
-user = os.environ['MGD_DBUSER']
-passwordFileName = os.environ['MGD_DBPASSWORDFILE']
+user = os.environ['PG_DBUSER']
+passwordFileName = os.environ['PG_DBPASSWORDFILE']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
@@ -142,9 +142,6 @@ def init():
 
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
-
-    # Set Log File Descriptor
-    db.set_sqlLogFD(diagFile)
 
     diagFile.write('Start Date/Time: %s\n' % (mgi_utils.date()))
     diagFile.write('Server: %s\n' % (db.get_sqlServer()))

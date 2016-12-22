@@ -74,8 +74,8 @@ import loadlib
 #
 # from configuration file
 #
-user = os.environ['MGD_DBUSER']
-passwordFileName = os.environ['MGD_DBPASSWORDFILE']
+user = os.environ['PG_DBUSER']
+passwordFileName = os.environ['PG_DBPASSWORDFILE']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
@@ -110,7 +110,7 @@ aliasKey = 0		# PRB_Alias._Alias_key
 loaddate = loadlib.loaddate
 
 # delete the probe/marker relationships so we can add new ones
-deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s\n'
+deleteSQL = 'delete from PRB_Marker where _Probe_key = %s and _Marker_key = %s;'
 execSQL = ''
 
 # Purpose: prints error message and exits
@@ -192,9 +192,6 @@ def init():
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
 
-    # Set Log File Descriptor
-    db.set_sqlLogFD(diagFile)
-
     diagFile.write('Start Date/Time: %s\n' % (mgi_utils.date()))
     diagFile.write('Server: %s\n' % (db.get_sqlServer()))
     diagFile.write('Database: %s\n' % (db.get_sqlDatabase()))
@@ -244,8 +241,6 @@ def setPrimaryKeys():
 
 def bcpFiles():
 
-    bcpdelim = "|"
-
     if DEBUG or not bcpon:
 	#print execSQL
         return
@@ -254,20 +249,29 @@ def bcpFiles():
     refFile.close()
     aliasFile.close()
 
+    db.commit()
+
+    bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
+    currentDir = os.getcwd()
+
+    bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), markerTable, currentDir, markerFileName)
+
+    bcp2 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), refTable, currentDir, refFileName)
+
+    bcp3 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), aliasTable, currentDir, aliasFileName)
+
     # execute the sql deletions
     if execSQL != '':
         db.sql(execSQL, None)
 
-    bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
-    bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
-
-    bcp1 = '%s%s in %s %s' % (bcpI, markerTable, markerFileName, bcpII)
-    bcp2 = '%s%s in %s %s' % (bcpI, refTable, refFileName, bcpII)
-    bcp3 = '%s%s in %s %s' % (bcpI, aliasTable, aliasFileName, bcpII)
-
     for bcpCmd in [bcp1, bcp2, bcp3]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
+
+    db.commit()
 
     return
 
@@ -351,7 +355,7 @@ def processFile():
 
 	for markerKey in markerList:
 	    if markerList.count(markerKey) == 1:
-                markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
+                markerFile.write('%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\n' \
 		    % (probeKey, markerKey, refsKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
 		execSQL = execSQL + deleteSQL % (probeKey, markerKey)
             else:
@@ -360,13 +364,13 @@ def processFile():
 	if referenceKey > 0:
 	    refKey = referenceKey
 	else:
-            refFile.write('%s|%s|%s|0|0|%s|%s|%s|%s\n' \
+            refFile.write('%s\t%s\t%s|0|0\t%s\t%s\t%s\t%s\n' \
 		    % (refKey, probeKey, refsKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # aliases
 
         for alias in aliasList:
-            aliasFile.write('%s|%s|%s|%s|%s|%s|%s\n' \
+            aliasFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
 		    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
 	    aliasKey = aliasKey + 1
 

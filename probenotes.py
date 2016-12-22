@@ -63,8 +63,8 @@ import loadlib
 #
 # from configuration file
 #
-user = os.environ['MGD_DBUSER']
-passwordFileName = os.environ['MGD_DBPASSWORDFILE']
+user = os.environ['PG_DBUSER']
+passwordFileName = os.environ['PG_DBPASSWORDFILE']
 mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
@@ -90,7 +90,7 @@ errorFileName = ''	# error file name
 loaddate = loadlib.loaddate
 
 # delete the probe/notes so we can add new ones
-deleteSQL = 'delete from PRB_Notes where _Probe_key = %s\n'
+deleteSQL = 'delete from PRB_Notes where _Probe_key = %s;'
 
 execSQL = ''
 
@@ -163,9 +163,6 @@ def init():
     # Log all SQL
     db.set_sqlLogFunction(db.sqlLogAll)
 
-    # Set Log File Descriptor
-    db.set_sqlLogFD(diagFile)
-
     diagFile.write('Start Date/Time: %s\n' % (mgi_utils.date()))
     diagFile.write('Server: %s\n' % (db.get_sqlServer()))
     diagFile.write('Database: %s\n' % (db.get_sqlDatabase()))
@@ -199,7 +196,6 @@ def verifyMode():
 
 def bcpFiles():
 
-    bcpdelim = "|"
     diagFile.write(execSQL)
 
     if DEBUG or not bcpon:
@@ -207,18 +203,23 @@ def bcpFiles():
 
     notesFile.close()
 
+    db.commit()
+
     # execute the sql deletions
     if len(execSQL) > 0:
         db.sql(execSQL, None)
 
-    bcpI = 'cat %s | bcp %s..' % (passwordFileName, db.get_sqlDatabase())
-    bcpII = '-c -t\"|" -S%s -U%s' % (db.get_sqlServer(), db.get_sqlUser())
+    bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
+    currentDir = os.getcwd()
 
-    bcp1 = '%s%s in %s %s' % (bcpI, notesTable, notesFileName, bcpII)
+    bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
+        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), noteTable, currentDir, noteFileName)
 
     for bcpCmd in [bcp1]:
 	diagFile.write('%s\n' % bcpCmd)
 	os.system(bcpCmd)
+
+    db.commit()
 
     return
 
@@ -275,7 +276,7 @@ def processFile():
 
         noteSeq = 1
         if len(notes) > 0:
-            notesFile.write('%s|%d|%s|%s|%s\n' % (probeKey, noteSeq, notes, loaddate, loaddate))
+            notesFile.write('%s\t%d\t%s\t%s\t%s\n' % (probeKey, noteSeq, notes, loaddate, loaddate))
 
     #	end of "for line in inputFile.readlines():"
 
