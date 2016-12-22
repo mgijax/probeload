@@ -4,6 +4,8 @@ STAFF: lec
 CHANGES:
 TR12491/GXD/Lewandowski et al
 postgres changes
+probenotes.py is the only one actually tested
+as changes are made/tested on a on-demand basis
 
 TAG: probeload-5-1-5-1
 DATE: 09/26/2013
