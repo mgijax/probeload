@@ -81,6 +81,8 @@ mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
 
+bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh '
+
 DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab
 CRT = '\n'		# carriage return/newline
@@ -148,6 +150,7 @@ def exit(
 # Throws: nothing
 
 def init():
+    global bcpCommand
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
     global markerFile, refFile, aliasFile
  
@@ -155,6 +158,8 @@ def init():
     db.set_sqlUser(user)
     db.set_sqlPasswordFromFile(passwordFileName)
  
+    bcpCommand = bcpCommand + db.get_sqlServer() + ' ' + db.get_sqlDatabase() + ' %s ' + currentDir + ' %s "\\t" "\\n" mgd'
+
     head, tail = os.path.split(inputFileName) 
 
     diagFileName = outputDir + '/' + tail + '.diagnostics'
@@ -252,16 +257,9 @@ def bcpFiles():
 
     db.commit()
 
-    bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
-
-    bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), markerTable, currentDir, markerFileName)
-
-    bcp2 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), refTable, currentDir, refFileName)
-
-    bcp3 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), aliasTable, currentDir, aliasFileName)
+    bcp1 = bcpCommand % (markerTable, markerFileName)
+    bcp2 = bcpCommand % (refTable, refFileName)
+    bcp3 = bcpCommand % (aliasTable, aliasFileName)
 
     # execute the sql deletions
     for r in execSQL:

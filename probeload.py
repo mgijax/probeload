@@ -111,6 +111,8 @@ mode = os.environ['PROBELOADMODE']
 inputFileName = os.environ['PROBEDATAFILE']
 outputDir = os.environ['PROBELOADDATADIR']
 
+bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh '
+
 DEBUG = 0		# if 0, not in debug mode
 TAB = '\t'		# tab
 CRT = '\n'		# carriage return/newline
@@ -197,6 +199,7 @@ def exit(
 # Throws: nothing
 
 def init():
+    global bcpCommand
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
     global probeFile, markerFile, refFile, aliasFile, accFile, accRefFile, noteFile
     global newProbeFile, rawNoteFile
@@ -205,6 +208,8 @@ def init():
     db.set_sqlUser(user)
     db.set_sqlPasswordFromFile(passwordFileName)
  
+    bcpCommand = bcpCommand + db.get_sqlServer() + ' ' + db.get_sqlDatabase() + ' %s ' + currentDir + ' %s "\\t" "\\n" mgd'
+
     head, tail = os.path.split(inputFileName) 
 
     diagFileName = outputDir + '/' + tail + '.diagnostics'
@@ -383,28 +388,13 @@ def bcpFiles():
 
     db.commit()
 
-    bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
-
-    bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), probeTable, currentDir, probeFileName)
-
-    bcp2 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), markerTable, currentDir, markerFileName)
-
-    bcp3 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), refTable, currentDir, refFileName)
-
-    bcp4 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), aliasTable, currentDir, aliasFileName)
-
-    bcp5 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), accTable, currentDir, accFileName)
-
-    bcp6 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), accRefrobeTable, currentDir, accRefFileName)
-
-    bcp7 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), noteTable, currentDir, noteFileName)
+    bcp1 = bcpCommand % (probeTable, probeFileName)
+    bcp2 = bcpCommand % (markerTable, markerFileName)
+    bcp3 = bcpCommand % (refTable, refFileName)
+    bcp4 = bcpCommand % (aliasTable, aliasFileName)
+    bcp5 = bcpCommand % (accTable, accFileName)
+    bcp6 = bcpCommand % (accRefTable, accRefFileName)
+    bcp7 = bcpCommand % (noteTable, noteFileName)
 
     for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6, bcp7]:
 	diagFile.write('%s\n' % bcpCmd)
