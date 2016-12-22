@@ -65,6 +65,7 @@ import loadlib
 #
 user = os.environ['PG_DBUSER']
 passwordFileName = os.environ['PG_1LINE_PASSFILE']
+bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh '
 mode = os.environ['PROBELOADMODE']
 currentDir = os.environ['PROBELOADDIR']
 inputFileName = os.environ['PROBEDATAFILE']
@@ -128,6 +129,7 @@ def exit(
 # Throws: nothing
 
 def init():
+    global bcpCommand
     global diagFile, errorFile, inputFile, errorFileName, diagFileName
     global notesFile
  
@@ -135,6 +137,8 @@ def init():
     db.set_sqlUser(user)
     db.set_sqlPasswordFromFile(passwordFileName)
  
+    bcpCommand = bcpCommand + db.get_sqlServer() + ' ' + db.get_sqlDatabase() + ' %s ' + currentDir + ' %s "\\t" "\\n" mgd'
+
     head, tail = os.path.split(inputFileName) 
 
     diagFileName = outputDir + '/' + tail + '.diagnostics'
@@ -196,7 +200,8 @@ def verifyMode():
 
 def bcpFiles():
 
-    diagFile.write(str(execSQL))
+    for r in execSQL:
+        diagFile.write(r + '\n')
 
     if DEBUG or not bcpon:
         return
@@ -210,10 +215,7 @@ def bcpFiles():
         db.sql(r, None)
     db.commit()
 
-    bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
-
-    bcp1 = '%s %s %s %s %s %s "\\t" "\\n" mgd' % \
-        (bcpCommand, db.get_sqlServer(), db.get_sqlDatabase(), notesTable, currentDir, notesFileName)
+    bcp1 = bcpCommand % (notesTable, notesFileName)
 
     for bcpCmd in [bcp1]:
 	diagFile.write('%s\n' % bcpCmd)
