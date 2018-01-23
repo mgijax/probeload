@@ -593,9 +593,8 @@ def processFile():
 
 	# Notes
 
-        noteSeq = 1
         if len(notes) > 0:
-	    noteFile.write('%s\t%d\t%s\t%s\t%s\n' % (probeKey, noteSeq, notes, loaddate, loaddate))
+	    noteFile.write('%s\t%s\t%s\t%s\n' % (probeKey, notes, loaddate, loaddate))
 
         accKey = accKey + 1
         mgiKey = mgiKey + 1

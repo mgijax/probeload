@@ -276,9 +276,8 @@ def processFile():
         if mode in ('preview', 'load'):
 	    execSQL.append(deleteSQL % (probeKey))
 
-        noteSeq = 1
         if len(notes) > 0:
-            notesFile.write('%s\t%d\t%s\t%s\t%s\n' % (probeKey, noteSeq, notes, loaddate, loaddate))
+            notesFile.write('%s\t%s\t%s\t%s\n' % (probeKey, notes, loaddate, loaddate))
 
     #	end of "for line in inputFile.readlines():"
 

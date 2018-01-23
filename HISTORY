@@ -1,3 +1,9 @@
+TAG: probeload-6-0-12-?
+DATE: 01/22/2018
+STAFF: sc
+CHANGES: TR12662/GMC
+1) prb_notes/prb_ref_notes/sequenceNum is obsolete
+
 TAG: probeload-6-0-6-1
 DATE: 12/29/2016
 STAFF: lec
