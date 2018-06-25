@@ -405,21 +405,21 @@ def processFile():
 
         # if no errors, process the primer
 
-        primerFile.write('%d\t%s||%d|%d\t%s\t%s\t%s\t%s||\t%s\t%s\t%s\t%s\t%s\n' \
+        primerFile.write('%d\t%s\t\t%d\t%d\t%s\t%s\t%s\t%s\t\t\t%s\t%s\t%s\t%s\t%s\n' \
             % (primerKey, name, NA, vectorKey, segmentTypeKey, mgi_utils.prvalue(sequence1), \
 	    mgi_utils.prvalue(sequence2), mgi_utils.prvalue(regionCovered), mgi_utils.prvalue(productSize), \
 	    createdByKey, createdByKey, loaddate, loaddate))
 
 	for markerKey in markerList:
 	    if markerList.count(markerKey) == 1:
-                markerFile.write('%s\t%s|%d\t%s\t%s\t%s\t%s\t%s\n' \
+                markerFile.write('%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\n' \
 		    % (primerKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
             else:
 		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
 	# loaddate))
 
-        refFile.write('%s\t%s\t%s|0|0\t%s\t%s\t%s\t%s\n' % (refKey, primerKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+        refFile.write('%s\t%s\t%s\t0\t0\t%s\t%s\t%s\t%s\n' % (refKey, primerKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # aliases
 
@@ -432,7 +432,7 @@ def processFile():
 
         # MGI Accession ID for the marker
 
-        accFile.write('%s\t%s%d\t%s\t%s|1|%d|%d|0|1\t%s\t%s\t%s\t%s\n' \
+        accFile.write('%s\t%s%d\t%s\t%s\t1\t%d\t%d\t0\t1\t%s\t%s\t%s\t%s\n' \
             % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, primerKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
 
 	newPrimerFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
@@ -448,7 +448,7 @@ def processFile():
 		continue
 
 	    prefixPart, numericPart = accessionlib.split_accnum(acc)
-            accFile.write('%s\t%s\t%s\t%s\t%s|%d|%d|0|1\t%s\t%s\t%s\t%s\n' \
+            accFile.write('%s\t%s\t%s\t%s\t%s\t%d\t%d\t0\t1\t%s\t%s\t%s\t%s\n' \
                 % (accKey, acc, prefixPart, numericPart, logicalDBKey, primerKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
             accRefFile.write('%s\t%s\t%s\t%s\t%s\t%s\n' \
                 % (accKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))

@@ -373,7 +373,7 @@ def processFile():
 
 	# add alias using fromID name (from) to toID
 
-        refFile.write('%s\t%s\t%s|0|0\t%s\t%s\t%s\t%s\n' \
+        refFile.write('%s\t%s\t%s\t0\t0\t%s\t%s\t%s\t%s\n' \
         	% (refKey, toKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
         aliasFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         	% (aliasKey, refKey, name, createdByKey, createdByKey, loaddate, loaddate))

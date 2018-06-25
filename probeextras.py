@@ -362,7 +362,7 @@ def processFile():
 	if referenceKey > 0:
 	    refKey = referenceKey
 	else:
-            refFile.write('%s\t%s\t%s|0|0\t%s\t%s\t%s\t%s\n' \
+            refFile.write('%s\t%s\t%s\t0\t0\t%s\t%s\t%s\t%s\n' \
 		    % (refKey, probeKey, refsKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # aliases
