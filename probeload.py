@@ -477,6 +477,7 @@ def processFile():
 	    if organismKey == 0 or strainKey == 0 or tissueKey == 0 or \
                genderKey == 0 or cellLineKey == 0 or vectorKey == 0 or \
                segmentTypeKey == 0 or sourceKey == 0:
+		errorFile.write('%s, %s, %s, %s, %s, %s, %s, %s\n' % (segmentType, vectorType, organism, strain, tissue, gender, cellLine, age))
 	        error = 1
 
         elif not isParent and isSource:
@@ -535,7 +536,7 @@ def processFile():
 
         # if no errors, process the probe
 
-        probeFile.write('%d\t%s\t%s\t%s\t%s\t%s||\t%s\t%s\t%s|\t%s\t%s\t%s\t%s\n' \
+        probeFile.write('%d\t%s\t%s\t%s\t%s\t%s\t\t\t%s\t%s\t%s\t\t%s\t%s\t%s\t%s\n' \
             % (probeKey, name, parentProbeKey, sourceKey, vectorKey, segmentTypeKey, mgi_utils.prvalue(regionCovered), \
 	    mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), createdByKey, createdByKey, loaddate, loaddate))
 
@@ -546,7 +547,7 @@ def processFile():
             else:
 		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
-        refFile.write('%s\t%s\t%s|0|0\t%s\t%s\t%s\t%s\n' \
+        refFile.write('%s\t%s\t%s\t0\t0\t%s\t%s\t%s\t%s\n' \
 		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # aliases
@@ -560,7 +561,7 @@ def processFile():
 
         # MGI Accession ID for the marker
 
-        accFile.write('%s\t%s%d\t%s\t%s|1\t%d\t%d|0|1\t%s\t%s\t%s\t%s\n' \
+        accFile.write('%s\t%s%d\t%s\t%s\t1\t%d\t%d\t0\t1\t%s\t%s\t%s\t%s\n' \
             % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
 
 	# Print out a new text file and attach the new MGI Probe IDs as the last field
@@ -602,7 +603,7 @@ def processFile():
 	# sequence accession ids
 	for acc in seqAccDict.keys():
 	    prefixPart, numericPart = accessionlib.split_accnum(acc)
-            accFile.write('%s\t%s\t%s\t%s\t%s\t%d\t%d|0|1\t%s\t%s\t%s\t%s\n' \
+            accFile.write('%s\t%s\t%s\t%s\t%s\t%d\t%d\t0\t1\t%s\t%s\t%s\t%s\n' \
                 % (accKey, acc, prefixPart, numericPart, seqAccDict[acc], probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
             accRefFile.write('%s\t%s\t%s\t%s\t%s\t%s\n' \
                 % (accKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))

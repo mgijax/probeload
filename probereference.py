@@ -211,6 +211,37 @@ def verifyMode():
     elif mode not in ('load', 'load-noreference'):
         exit(1, 'Invalid Processing Mode:  %s\n' % (mode))
 
+# Purpose:  verify Probe based on Probe Name
+# Returns:  Probe Key and Probe ID if Probe
+# Assumes:  nothing
+# Throws:  nothing
+
+def verifyProbe(
+    probeName,   # name of the Probe (string)
+    lineNum,     # line number (integer)
+    errorFile    # error file (file descriptor)
+    ):
+
+    probeKey = None
+
+    results = db.sql('''
+    		     select p._Probe_key, a.accID
+		     from PRB_Probe p, ACC_Accession a
+		     where p._Probe_key = a._Object_key
+		     and a._MGIType_key = 3
+                     and p.name = '%s'
+                     ''' % (probeName), 'auto')
+
+    for r in results:
+        probeKey = r['_Probe_key']
+	accID = r['accID']
+
+    if probeKey is None:
+        probeKey = 0
+	accID = ''
+
+    return probeKey, accID
+
 # Purpose:  verify Probe Reference based on Probe Accession ID and J:
 # Returns:  Probe Reference Key if Probe and Reference are valid, else 0
 # Assumes:  nothing
@@ -230,8 +261,8 @@ def verifyProbeReference(
     results = db.sql('''
                      select r._Reference_key 
                      from PRB_Reference r, PRB_Acc_View p, BIB_View b
-                     where p.accID = "%s" 
-		     and b.jnumID = "%s"
+                     where p.accID = '%s' 
+		     and b.jnumID = '%s'
 		     and p._Object_key = r._Probe_key
 		     and b._Refs_key = r._Refs_key
                      ''' % (probeID, referenceID), 'auto')
@@ -268,7 +299,7 @@ def setPrimaryKeys():
 
 def bcpFiles():
 
-    bcpdelim = "|"
+    bcpdelim = "\t"
 
     if DEBUG or not bcpon:
         return
@@ -311,14 +342,18 @@ def processFile():
         tokens = string.split(line[:-1], '\t')
 
         try:
-	    probeID = tokens[0]
+	    probeID = probeName = tokens[0]
 	    jnum = tokens[1]
 	    aliasList = string.split(tokens[2], '|')
 	    createdBy = tokens[3]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
-        probeKey = loadlib.verifyProbe(probeID, lineNum, errorFile)
+	if probeID.find('MGI:') >= 0:
+            probeKey = loadlib.verifyProbe(probeID, lineNum, errorFile)
+	else:
+	    probeKey, probeID = verifyProbe(probeName, lineNum, errorFile)
+
         probeReferenceKey = verifyProbeReference(probeID, jnum, lineNum, errorFile)
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
 	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
@@ -349,7 +384,7 @@ def processFile():
 	# else use the existing probe-reference key
 
         if probeReferenceKey == 0:
-            refFile.write('%s\t%s\t%s|0|0\t%s\t%s\t%s\t%s\n' \
+            refFile.write('%s\t%s\t%s\t0\t0\t%s\t%s\t%s\t%s\n' \
 		    % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 	    aliasrefKey = refKey
 	    refKey = refKey + 1
