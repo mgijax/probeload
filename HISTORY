@@ -2,6 +2,8 @@ TAG: probeload-6-0-12-2
 DATE: 06/25/2018
 STAFF: lec
 CHANGES: TR12887/Allen Institute
+1) all bcp should use '\t' as delimiter
+2) probeload.py, probereference.py : tested
 
 TAG: probeload-6-0-12-1
 DATE: 03/07/2018
