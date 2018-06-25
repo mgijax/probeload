@@ -7,20 +7,20 @@
 source `dirname $0`/Configuration
 
 # for both primer & probe
-setenv PROBEPRIMERDIR	/mgi/all/wts_projects/9400/9417
-setenv PRIMERDIR	${PROBEPRIMERDIR}/primerload
-setenv PROBEDIR		${PROBEPRIMERDIR}/probeload
+setenv PROBEPRIMERLOADDIR	/mgi/all/wts_projects/9400/9417
+setenv PRIMERLOADDIR	${PROBEPRIMERLOADDIR}/primerload
+setenv PROBELOADDIR	${PROBEPRIMERLOADDIR}/probeload
 
 # primer stuff
-setenv LOGDIR		${PRIMERDIR}/logs
-setenv INPUTDIR		${PRIMERDIR}/input
-setenv OUTPUTDIR	${PRIMERDIR}/output
+setenv LOGDIR		${PRIMERLOADDIR}/logs
+setenv INPUTDIR		${PRIMERLOADDIR}/input
+setenv OUTPUTDIR	${PRIMERLOADDIR}/output
 setenv PRIMERDATAFILE	${INPUTDIR}/mydata.txt
 setenv PRIMERLOG	${LOGDIR}/mylog.log
 setenv PRIMERMODE	load
 
 # probe stuff
-setenv PROBELOADDATADIR	${PROBEDIR}
+setenv PROBELOADDATADIR	${PROBELOADDIR}
 setenv PROBEDATAFILE	${PROBELOADDATADIR}/mydata.txt
 setenv PROBELOG		${PROBELOADDATADIR}/mylog.log
 setenv PROBELOADMODE	load
