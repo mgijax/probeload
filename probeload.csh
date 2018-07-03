@@ -17,5 +17,9 @@ date >> ${PROBELOG}
 
 ${PROBELOAD}/probeload.py >>& ${PROBELOG}
 
+cd ${NOTELOAD}
+source ./Configuration
+${NOTELOAD}/mginoteload.py ${NOTELOAD_CMD} -I${NOTEINPUTFILE} -M${NOTEMODE} -O${NOTEOBJECTTYPE} -T"${NOTETYPE}"
+
 date >> ${PROBELOG}
 
