@@ -25,3 +25,11 @@ setenv PROBEDATAFILE	${PROBELOADDATADIR}/mydata.txt
 setenv PROBELOG		${PROBELOADDATADIR}/mylog.log
 setenv PROBELOADMODE	load
 
+# noteload
+setenv NOTEMODE         load
+setenv NOTEDATADIR      ${PROBELOADDIR}
+setenv NOTEINPUTFILE    ${NOTEDATADIR}/fawNote.txt
+setenv NOTELOG          ${NOTEINPUTFILE}.log
+setenv NOTETYPE         "Raw Sequence"
+setenv NOTEOBJECTTYPE   Probe
+
