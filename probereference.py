@@ -389,6 +389,7 @@ def processFile():
 	    aliasrefKey = refKey
 	    refKey = refKey + 1
         else:
+	    #errorFile.write('Probe/Reference Already Exists: %s\n' % (tokens))
 	    aliasrefKey = probeReferenceKey
 
         # aliases
