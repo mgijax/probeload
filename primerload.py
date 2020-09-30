@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 
 #
 # Program: primerload.py
@@ -155,7 +154,7 @@ loaddate = loadlib.loaddate
 
 def exit(
     status,          # numeric exit status (integer)
-    message = None   # exit message (string)
+    message = None   # exit message (str.
     ):
 
     if message is not None:
@@ -166,7 +165,7 @@ def exit(
         errorFile.write('\n\nEnd Date/Time: %s\n' % (mgi_utils.date()))
         diagFile.close()
         errorFile.close()
-	inputFile.close()
+        inputFile.close()
     except:
         pass
 
@@ -201,12 +200,12 @@ def init():
         diagFile = open(diagFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % diagFileName)
-		
+                
     try:
         errorFile = open(errorFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % errorFileName)
-		
+                
     try:
         inputFile = open(inputFileName, 'r')
     except:
@@ -290,13 +289,13 @@ def setPrimaryKeys():
 
     global primerKey, refKey, aliasKey, accKey, mgiKey
 
-    results = db.sql('select max(_Probe_key) + 1 as maxKey from PRB_Probe', 'auto')
+    results = db.sql('''select nextval('prb_probe_seq') as maxKey''', 'auto')
     primerKey = results[0]['maxKey']
 
-    results = db.sql('select max(_Reference_key) + 1 as maxKey from PRB_Reference', 'auto')
+    results = db.sql('''select nextval('prb_reference_seq') as maxKey''', 'auto')
     refKey = results[0]['maxKey']
 
-    results = db.sql('select max(_Alias_key) + 1 as maxKey from PRB_Alias', 'auto')
+    results = db.sql('''select nextval('prb_alias_seq') as maxKey''', 'auto')
     aliasKey = results[0]['maxKey']
 
     results = db.sql('select max(_Accession_key) + 1 as maxKey from ACC_Accession', 'auto')
@@ -335,9 +334,19 @@ def bcpFiles():
     bcp7 = bcpCommand % (noteTable, noteFileName)
 
     for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6, bcp7]:
-	diagFile.write('%s\n' % bcpCmd)
-	os.system(bcpCmd)
+        diagFile.write('%s\n' % bcpCmd)
+        os.system(bcpCmd)
 
+    # update prb_probe_seq auto-sequence
+    db.sql('''select setval('prb_probe_seq', (select max(_Probe_key) from PRB_Probe))''', None)
+    db.commit()
+
+    # update prb_reference_seq auto-sequence
+    db.sql('''select setval('prb_reference_seq', (select max(_Reference) from PRB_Reference))''', None)
+    db.commit()
+
+    # update prb_alias_seq auto-sequence
+    db.sql('''select setval('prb_alias_seq', (select max(_Alias_key) from PRB_Alias))''', None)
     db.commit()
 
     return
@@ -361,42 +370,42 @@ def processFile():
         lineNum = lineNum + 1
 
         # Split the line into tokens
-        tokens = string.split(line[:-1], '\t')
+        tokens = str.split(line[:-1], '\t')
 
         try:
-	    markerSymbol = tokens[0]	# not used
-	    markerIDs = string.split(tokens[1], '|')
-	    name = tokens[2]
-	    jnum = tokens[3]
-	    regionCovered = tokens[4]
-	    sequence1 = tokens[5]
-	    sequence2 = tokens[6]
-	    productSize = tokens[7]
-	    notes = tokens[8]
-	    sequenceIDs = tokens[9]
-	    aliasList = string.split(tokens[10], '|')
-	    createdBy = tokens[11]
+            markerSymbol = tokens[0]	# not used
+            markerIDs = str.split(tokens[1], '|')
+            name = tokens[2]
+            jnum = tokens[3]
+            regionCovered = tokens[4]
+            sequence1 = tokens[5]
+            sequence2 = tokens[6]
+            productSize = tokens[7]
+            notes = tokens[8]
+            sequenceIDs = tokens[9]
+            aliasList = str.split(tokens[10], '|')
+            createdBy = tokens[11]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
-	# marker IDs
+        # marker IDs
 
-	markerList = []
-	for markerID in markerIDs:
+        markerList = []
+        for markerID in markerIDs:
 
-	    markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
+            markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
 
-	    if len(markerID) > 0 and markerKey == 0:
-	        errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
-	        error = 1
+            if len(markerID) > 0 and markerKey == 0:
+                errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
+                error = 1
             elif len(markerID) > 0:
-		markerList.append(markerKey)
+                markerList.append(markerKey)
 
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
-	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+        createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	# sequence IDs
-	seqAccList = string.split(sequenceIDs, '|')
+        # sequence IDs
+        seqAccList = str.split(sequenceIDs, '|')
 
         # if errors, continue to next record
         if error:
@@ -406,17 +415,17 @@ def processFile():
 
         primerFile.write('%d\t%s\t\t%d\t%d\t%s\t%s\t%s\t%s\t\t\t%s\t%s\t%s\t%s\t%s\n' \
             % (primerKey, name, NA, vectorKey, segmentTypeKey, mgi_utils.prvalue(sequence1), \
-	    mgi_utils.prvalue(sequence2), mgi_utils.prvalue(regionCovered), mgi_utils.prvalue(productSize), \
-	    createdByKey, createdByKey, loaddate, loaddate))
+            mgi_utils.prvalue(sequence2), mgi_utils.prvalue(regionCovered), mgi_utils.prvalue(productSize), \
+            createdByKey, createdByKey, loaddate, loaddate))
 
-	for markerKey in markerList:
-	    if markerList.count(markerKey) == 1:
+        for markerKey in markerList:
+            if markerList.count(markerKey) == 1:
                 markerFile.write('%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\n' \
-		    % (primerKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
+                    % (primerKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
             else:
-		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
+                errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
-	# loaddate))
+        # loaddate))
 
         refFile.write('%s\t%s\t%s\t0\t0\t%s\t%s\t%s\t%s\n' % (refKey, primerKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
@@ -434,32 +443,32 @@ def processFile():
         accFile.write('%s\t%s%d\t%s\t%s\t1\t%d\t%d\t0\t1\t%s\t%s\t%s\t%s\n' \
             % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, primerKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
 
-	newPrimerFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
-	   % (markerSymbol, string.join(markerIDs, '|'), name, jnum, regionCovered, sequence1, sequence2, productSize, notes, sequenceIDs, createdBy, mgiPrefix, mgiKey))
+        newPrimerFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
+           % (markerSymbol, str.join(markerIDs, '|'), name, jnum, regionCovered, sequence1, sequence2, productSize, notes, sequenceIDs, createdBy, mgiPrefix, mgiKey))
 
         accKey = accKey + 1
         mgiKey = mgiKey + 1
 
-	# sequence accession ids
-	for acc in seqAccList:
+        # sequence accession ids
+        for acc in seqAccList:
 
-	    if len(acc) == 0:
-		continue
+            if len(acc) == 0:
+                continue
 
-	    prefixPart, numericPart = accessionlib.split_accnum(acc)
+            prefixPart, numericPart = accessionlib.split_accnum(acc)
             accFile.write('%s\t%s\t%s\t%s\t%s\t%d\t%d\t0\t1\t%s\t%s\t%s\t%s\n' \
                 % (accKey, acc, prefixPart, numericPart, logicalDBKey, primerKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
             accRefFile.write('%s\t%s\t%s\t%s\t%s\t%s\n' \
                 % (accKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
-	    accKey = accKey + 1
+            accKey = accKey + 1
 
-	# notes
+        # notes
 
-	if len(notes) > 0:
-	   noteFile.write('%s|1\t%s\t%s\t%s\n' \
-		% (primerKey, notes, loaddate, loaddate))
+        if len(notes) > 0:
+           noteFile.write('%s|1\t%s\t%s\t%s\n' \
+                % (primerKey, notes, loaddate, loaddate))
 
-	refKey = refKey + 1
+        refKey = refKey + 1
         primerKey = primerKey + 1
 
     #	end of "for line in inputFile.readlines():"
@@ -481,4 +490,3 @@ setPrimaryKeys()
 processFile()
 bcpFiles()
 exit(0)
-

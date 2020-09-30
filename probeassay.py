@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 
 #
 # Program: probeassay.py
@@ -127,7 +126,7 @@ loaddate = loadlib.loaddate
 
 def exit(
     status,          # numeric exit status (integer)
-    message = None   # exit message (string)
+    message = None   # exit message (str.
     ):
 
     if message is not None:
@@ -138,7 +137,7 @@ def exit(
         errorFile.write('\n\nEnd Date/Time: %s\n' % (mgi_utils.date()))
         diagFile.close()
         errorFile.close()
-	inputFile.close()
+        inputFile.close()
     except:
         pass
 
@@ -172,12 +171,12 @@ def init():
         diagFile = open(diagFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % diagFileName)
-		
+                
     try:
         errorFile = open(errorFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % errorFileName)
-		
+                
     try:
         inputFile = open(inputFileName, 'r')
     except:
@@ -231,10 +230,10 @@ def setPrimaryKeys():
 
     global refKey, aliasKey
 
-    results = db.sql('select maxKey = max(_Reference_key) + 1 from PRB_Reference', 'auto')
+    results = db.sql('''select nextval('prb_reference_seq') as maxKey''', 'auto')
     refKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = max(_Alias_key) + 1 from PRB_Alias', 'auto')
+    results = db.sql('''select nextval('prb_alias_seq') as maxKey''', 'auto')
     aliasKey = results[0]['maxKey']
 
 # Purpose:  BCPs the data into the database
@@ -278,6 +277,12 @@ def bcpFiles():
         diagFile.write('%s\n' % bcpCmd)
         os.system(bcpCmd)
 
+    # update prb_reference_seq auto-sequence
+    db.sql('''select setval('prb_reference_seq', (select max(_Reference) from PRB_Reference))''', None)
+    db.commit()
+
+    # update prb_alias_seq auto-sequence
+    db.sql('''select setval('prb_alias_seq', (select max(_Alias_key) from PRB_Alias))''', None)
     db.commit()
 
     return
@@ -300,31 +305,31 @@ def processFile():
 
     for line in inputFile.readlines():
 
-	error = 0
+        error = 0
         lineNum = lineNum + 1
 
         # Split the line into tokens
-        tokens = string.split(line[:-1], '\t')
+        tokens = str.split(line[:-1], '\t')
 
         try:
-	    fromID = tokens[0]
-	    name = tokens[1]
-	    toID = tokens[2]
-	    jnum = tokens[3]
-	    createdBy = tokens[4]
+            fromID = tokens[0]
+            name = tokens[1]
+            toID = tokens[2]
+            jnum = tokens[3]
+            createdBy = tokens[4]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
         fromKey = loadlib.verifyObject(fromID, mgiTypeKey, None, lineNum, errorFile)
         toKey = loadlib.verifyObject(toID, mgiTypeKey, None, lineNum, errorFile)
-	referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
-	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+        referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
+        createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	if fromKey == 0:
+        if fromKey == 0:
             errorFile.write('Invalid Probe "From":  %s\n' % (fromID))
             error = 1
 
-	if toKey == 0:
+        if toKey == 0:
             errorFile.write('Invalid Probe "To":  %s\n' % (toID))
             error = 1
 
@@ -336,33 +341,33 @@ def processFile():
             errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
             error = 1
 
-	# check that all genes are the same
-	checkGenesSQL = '''
-			select f.*
-			from PRB_Marker f, PRB_Marker t, GXD_ProbePrep p, GXD_Assay a
-			where f._Probe_key = %s
-			and t._Probe_key = %s
-			and p._Probe_key = %s
-			and p._ProbePrep_key = a._ProbePrep_key
-			and f._Marker_key = t._Marker_key
-			and f._Marker_key = a._Marker_key
-			''' % (fromKey, toKey, fromKey)
+        # check that all genes are the same
+        checkGenesSQL = '''
+                        select f.*
+                        from PRB_Marker f, PRB_Marker t, GXD_ProbePrep p, GXD_Assay a
+                        where f._Probe_key = %s
+                        and t._Probe_key = %s
+                        and p._Probe_key = %s
+                        and p._ProbePrep_key = a._ProbePrep_key
+                        and f._Marker_key = t._Marker_key
+                        and f._Marker_key = a._Marker_key
+                        ''' % (fromKey, toKey, fromKey)
 
-	checkGenes = db.sql(checkGenesSQL, 'auto')
+        checkGenes = db.sql(checkGenesSQL, 'auto')
         if len(checkGenes) == 0:
             errorFile.write('Gene of GenePaint, Eurexpress and Assay are not the same:  %s, %s\n' % (fromID, toID))
             error = 1
 
-	# check that the J: is on at least one Assay
-	checkJAssaySQL = '''
-			 select a.*
-			 from GXD_ProbePrep p, GXD_Assay a
-			 where p._Probe_key = %s
-			 and p._ProbePrep_key = a._ProbePrep_key
-			 and a._Refs_key = %s
-			 ''' % (fromKey, referenceKey)
+        # check that the J: is on at least one Assay
+        checkJAssaySQL = '''
+                         select a.*
+                         from GXD_ProbePrep p, GXD_Assay a
+                         where p._Probe_key = %s
+                         and p._ProbePrep_key = a._ProbePrep_key
+                         and a._Refs_key = %s
+                         ''' % (fromKey, referenceKey)
 
-	checkJAssay = db.sql(checkJAssaySQL, 'auto')
+        checkJAssay = db.sql(checkJAssaySQL, 'auto')
         if len(checkJAssay) == 0:
             errorFile.write('J: is not on any Assays attached to the probe:  %s\n' % (fromID))
             error = 1
@@ -371,23 +376,23 @@ def processFile():
         if error:
             continue
 
-	# add alias using fromID name (from) to toID
+        # add alias using fromID name (from) to toID
 
         refFile.write('%s\t%s\t%s\t0\t0\t%s\t%s\t%s\t%s\n' \
-        	% (refKey, toKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+                % (refKey, toKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
         aliasFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-        	% (aliasKey, refKey, name, createdByKey, createdByKey, loaddate, loaddate))
+                % (aliasKey, refKey, name, createdByKey, createdByKey, loaddate, loaddate))
         refKey = refKey + 1
         aliasKey = aliasKey + 1
 
-	# move assay information from fromID to toID
-	execAssaySQL.append(updateAssaySQL % (toKey, fromKey))
+        # move assay information from fromID to toID
+        execAssaySQL.append(updateAssaySQL % (toKey, fromKey))
 
-	# move fromID (from) references to toID
-	execRefSQL.append(updateRefSQL % (toKey, fromKey, referenceKey))
+        # move fromID (from) references to toID
+        execRefSQL.append(updateRefSQL % (toKey, fromKey, referenceKey))
 
-	# delete fromID (from)
-	execProbeSQL.append(deleteProbeSQL % (fromKey))
+        # delete fromID (from)
+        execProbeSQL.append(deleteProbeSQL % (fromKey))
 
     #	end of "for line in inputFile.readlines():"
 
@@ -401,4 +406,3 @@ setPrimaryKeys()
 processFile()
 bcpFiles()
 exit(0)
-

@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 
 #
 # Program: probenotes.py
@@ -103,7 +102,7 @@ execSQL = []
 
 def exit(
     status,          # numeric exit status (integer)
-    message = None   # exit message (string)
+    message = None   # exit message (str.
     ):
 
     if message is not None:
@@ -114,7 +113,7 @@ def exit(
         errorFile.write('\n\nEnd Date/Time: %s\n' % (mgi_utils.date()))
         diagFile.close()
         errorFile.close()
-	inputFile.close()
+        inputFile.close()
     except:
         pass
 
@@ -148,12 +147,12 @@ def init():
         diagFile = open(diagFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % diagFileName)
-		
+                
     try:
         errorFile = open(errorFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % errorFileName)
-		
+                
     try:
         inputFile = open(inputFileName, 'r')
     except:
@@ -218,9 +217,11 @@ def bcpFiles():
     bcp1 = bcpCommand % (notesTable, notesFileName)
 
     for bcpCmd in [bcp1]:
-	diagFile.write('%s\n' % bcpCmd)
-	os.system(bcpCmd)
+        diagFile.write('%s\n' % bcpCmd)
+        os.system(bcpCmd)
 
+    # update prb_notes_seq auto-sequence
+    db.sql('''select setval('prb_notes_seq', (select max(_Note_key) from PRB_Notes))''', None)
     db.commit()
 
     return
@@ -235,6 +236,9 @@ def processFile():
 
     global execSQL
 
+    results = db.sql('''select nextval('prb_notes_seq') as maxKey''', 'auto')
+    noteKey = results[0]['maxKey']
+
     lineNum = 0
     # For each line in the input file
 
@@ -244,25 +248,25 @@ def processFile():
         lineNum = lineNum + 1
 
         # Split the line into tokens
-        tokens = string.split(line[:-1], '\t')
+        tokens = str.split(line[:-1], '\t')
 
         try:
-	    probeID = tokens[0]
-	    notes = tokens[1]
-	    createdBy = tokens[2]
+            probeID = tokens[0]
+            notes = tokens[1]
+            createdBy = tokens[2]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
         probeKey = loadlib.verifyProbe(probeID, lineNum, errorFile)
-	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+        createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	if probeKey == 0:
-	    errorFile.write('Invalid Probe:  %s\n' % (probeID))
-	    error = 1
+        if probeKey == 0:
+            errorFile.write('Invalid Probe:  %s\n' % (probeID))
+            error = 1
 
-	if createdByKey == 0:
-	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
-	    error = 1
+        if createdByKey == 0:
+            errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
+            error = 1
 
         # if errors, continue to next record
         if error:
@@ -272,12 +276,13 @@ def processFile():
 
         # Notes
 
-	# automatically deletes any existing notes for this probe
+        # automatically deletes any existing notes for this probe
         if mode in ('preview', 'load'):
-	    execSQL.append(deleteSQL % (probeKey))
+            execSQL.append(deleteSQL % (probeKey))
 
         if len(notes) > 0:
-            notesFile.write('%s\t%s\t%s\t%s\n' % (probeKey, notes, loaddate, loaddate))
+            notesFile.write('%s\t%s\t%s\t%s\t%s\n' % (noteKey, probeKey, notes, loaddate, loaddate))
+            noteKey = noteKey + 1
 
     #	end of "for line in inputFile.readlines():"
 
@@ -290,4 +295,3 @@ verifyMode()
 processFile()
 bcpFiles()
 exit(0)
-

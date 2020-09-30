@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 
 #
 # Program: probemarker.py
@@ -106,7 +105,7 @@ execSQL = []
 
 def exit(
     status,          # numeric exit status (integer)
-    message = None   # exit message (string)
+    message = None   # exit message (str.
     ):
 
     if message is not None:
@@ -117,7 +116,7 @@ def exit(
         errorFile.write('\n\nEnd Date/Time: %s\n' % (mgi_utils.date()))
         diagFile.close()
         errorFile.close()
-	inputFile.close()
+        inputFile.close()
     except:
         pass
 
@@ -151,12 +150,12 @@ def init():
         diagFile = open(diagFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % diagFileName)
-		
+                
     try:
         errorFile = open(errorFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % errorFileName)
-		
+                
     try:
         inputFile = open(inputFileName, 'r')
     except:
@@ -219,9 +218,11 @@ def bcpFiles():
         db.sql(r, None)
 
     for bcpCmd in [bcp1]:
-	diagFile.write('%s\n' % bcpCmd)
-	os.system(bcpCmd)
+        diagFile.write('%s\n' % bcpCmd)
+        os.system(bcpCmd)
 
+    # update prb_marker_seq auto-sequence
+    db.sql('''select setval('prb_marker_seq', (select max(_Assoc_key) from PRB_Marker))''', None)
     db.commit()
 
     return
@@ -236,6 +237,9 @@ def processFile():
 
     global execSQL
 
+    results = db.sql('''select nextval('prb_marker_seq') as maxKey''', 'auto')
+    assocKey = results[0]['maxKey']
+
     lineNum = 0
     # For each line in the input file
 
@@ -245,45 +249,45 @@ def processFile():
         lineNum = lineNum + 1
 
         # Split the line into tokens
-        tokens = string.split(line[:-1], '\t')
+        tokens = str.split(line[:-1], '\t')
 
         try:
-	    probeID = tokens[0]
-	    markerIDs = string.split(tokens[1], '|')
-	    jnum = tokens[2]
-	    relationship = tokens[3]
-	    createdBy = tokens[4]
+            probeID = tokens[0]
+            markerIDs = str.split(tokens[1], '|')
+            jnum = tokens[2]
+            relationship = tokens[3]
+            createdBy = tokens[4]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
         probeKey = loadlib.verifyProbe(probeID, lineNum, errorFile)
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
-	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+        createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	if probeKey == 0:
-	    errorFile.write('Invalid Probe:  %s\n' % (probeID))
-	    error = 1
+        if probeKey == 0:
+            errorFile.write('Invalid Probe:  %s\n' % (probeID))
+            error = 1
 
-	if referenceKey == 0:
-	    errorFile.write('Invalid Reference:  %s\n' % (jnum))
-	    error = 1
+        if referenceKey == 0:
+            errorFile.write('Invalid Reference:  %s\n' % (jnum))
+            error = 1
 
-	if createdByKey == 0:
-	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
-	    error = 1
+        if createdByKey == 0:
+            errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
+            error = 1
 
-	# marker IDs
+        # marker IDs
 
-	markerList = []
-	for markerID in markerIDs:
+        markerList = []
+        for markerID in markerIDs:
 
-	    markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
+            markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
 
-	    if markerKey == 0:
-	        errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
-	        error = 1
+            if markerKey == 0:
+                errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
+                error = 1
             else:
-		markerList.append(markerKey)
+                markerList.append(markerKey)
 
         # if errors, continue to next record
         if error:
@@ -291,13 +295,14 @@ def processFile():
 
         # if no errors, process
 
-	for markerKey in markerList:
-	    if markerList.count(markerKey) == 1:
-                markerFile.write('%s|%s|%d|%s|%s|%s|%s|%s\n' \
-		    % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
-		execSQL.append(deleteSQL % (probeKey, markerKey))
+        for markerKey in markerList:
+            if markerList.count(markerKey) == 1:
+                markerFile.write('%s|%s|%s|%d|%s|%s|%s|%s|%s\n' \
+                    % (assocKey, probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
+                execSQL.append(deleteSQL % (probeKey, markerKey))
+                assocKey = assocKey + 1
             else:
-		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
+                errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
     #	end of "for line in inputFile.readlines():"
 
@@ -310,4 +315,3 @@ verifyMode()
 processFile()
 bcpFiles()
 exit(0)
-

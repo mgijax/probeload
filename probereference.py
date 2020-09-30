@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 
 #
 # Program: probereference.py
@@ -117,7 +116,7 @@ loaddate = loadlib.loaddate
 
 def exit(
     status,          # numeric exit status (integer)
-    message = None   # exit message (string)
+    message = None   # exit message (str.
     ):
 
     if message is not None:
@@ -128,7 +127,7 @@ def exit(
         errorFile.write('\n\nEnd Date/Time: %s\n' % (mgi_utils.date()))
         diagFile.close()
         errorFile.close()
-	inputFile.close()
+        inputFile.close()
     except:
         pass
 
@@ -162,12 +161,12 @@ def init():
         diagFile = open(diagFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % diagFileName)
-		
+                
     try:
         errorFile = open(errorFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % errorFileName)
-		
+                
     try:
         inputFile = open(inputFileName, 'r')
     except:
@@ -217,7 +216,7 @@ def verifyMode():
 # Throws:  nothing
 
 def verifyProbe(
-    probeName,   # name of the Probe (string)
+    probeName,   # name of the Probe (str.
     lineNum,     # line number (integer)
     errorFile    # error file (file descriptor)
     ):
@@ -225,20 +224,20 @@ def verifyProbe(
     probeKey = None
 
     results = db.sql('''
-    		     select p._Probe_key, a.accID
-		     from PRB_Probe p, ACC_Accession a
-		     where p._Probe_key = a._Object_key
-		     and a._MGIType_key = 3
+                     select p._Probe_key, a.accID
+                     from PRB_Probe p, ACC_Accession a
+                     where p._Probe_key = a._Object_key
+                     and a._MGIType_key = 3
                      and p.name = '%s'
                      ''' % (probeName), 'auto')
 
     for r in results:
         probeKey = r['_Probe_key']
-	accID = r['accID']
+        accID = r['accID']
 
     if probeKey is None:
         probeKey = 0
-	accID = ''
+        accID = ''
 
     return probeKey, accID
 
@@ -250,8 +249,8 @@ def verifyProbe(
 # Throws:  nothing
 
 def verifyProbeReference(
-    probeID,     # Accession ID of the Probe (string)
-    referenceID, # Reference Accession ID (string)
+    probeID,     # Accession ID of the Probe (str.
+    referenceID, # Reference Accession ID (str.
     lineNum,     # line number (integer)
     errorFile    # error file (file descriptor)
     ):
@@ -262,9 +261,9 @@ def verifyProbeReference(
                      select r._Reference_key 
                      from PRB_Reference r, PRB_Acc_View p, BIB_View b
                      where p.accID = '%s' 
-		     and b.jnumID = '%s'
-		     and p._Object_key = r._Probe_key
-		     and b._Refs_key = r._Refs_key
+                     and b.jnumID = '%s'
+                     and p._Object_key = r._Probe_key
+                     and b._Refs_key = r._Refs_key
                      ''' % (probeID, referenceID), 'auto')
 
     for r in results:
@@ -285,10 +284,10 @@ def setPrimaryKeys():
 
     global refKey, aliasKey
 
-    results = db.sql('select max(_Reference_key) + 1 as maxKey from PRB_Reference', 'auto')
+    results = db.sql('''select nextval('prb_reference_seq') as maxKey''', 'auto')
     refKey = results[0]['maxKey']
 
-    results = db.sql('select max(_Alias_key) + 1 as maxKey from PRB_Alias', 'auto')
+    results = db.sql('''select nextval('prb_alias_seq') as maxKey''', 'auto')
     aliasKey = results[0]['maxKey']
 
 # Purpose:  BCPs the data into the database
@@ -313,9 +312,15 @@ def bcpFiles():
     bcp2 = bcpCommand % (aliasTable, aliasFileName)
 
     for bcpCmd in [bcp1, bcp2]:
-	diagFile.write('%s\n' % bcpCmd)
-	os.system(bcpCmd)
+        diagFile.write('%s\n' % bcpCmd)
+        os.system(bcpCmd)
 
+    # update prb_reference_seq auto-sequence
+    db.sql('''select setval('prb_reference_seq', (select max(_Reference) from PRB_Reference))''', None)
+    db.commit()
+
+    # update prb_alias_seq auto-sequence
+    db.sql('''select setval('prb_alias_seq', (select max(_Alias_key) from PRB_Alias))''', None)
     db.commit()
 
     return
@@ -339,40 +344,40 @@ def processFile():
         lineNum = lineNum + 1
 
         # Split the line into tokens
-        tokens = string.split(line[:-1], '\t')
+        tokens = str.split(line[:-1], '\t')
 
         try:
-	    probeID = probeName = tokens[0]
-	    jnum = tokens[1]
-	    aliasList = string.split(tokens[2], '|')
-	    createdBy = tokens[3]
+            probeID = probeName = tokens[0]
+            jnum = tokens[1]
+            aliasList = str.split(tokens[2], '|')
+            createdBy = tokens[3]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
-	if probeID.find('MGI:') >= 0:
+        if probeID.find('MGI:') >= 0:
             probeKey = loadlib.verifyProbe(probeID, lineNum, errorFile)
-	else:
-	    probeKey, probeID = verifyProbe(probeName, lineNum, errorFile)
+        else:
+            probeKey, probeID = verifyProbe(probeName, lineNum, errorFile)
 
         probeReferenceKey = verifyProbeReference(probeID, jnum, lineNum, errorFile)
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
-	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+        createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	if probeKey == 0:
-	    errorFile.write('Invalid Probe:  %s\n' % (probeID))
-	    error = 1
+        if probeKey == 0:
+            errorFile.write('Invalid Probe:  %s\n' % (probeID))
+            error = 1
 
-	if referenceKey == 0:
-	    errorFile.write('Invalid Reference:  %s\n' % (jnum))
-	    error = 1
+        if referenceKey == 0:
+            errorFile.write('Invalid Reference:  %s\n' % (jnum))
+            error = 1
 
-	#if probeReferenceKey == 0:
-	#    errorFile.write('Invalid Probe Reference:  %s, %s\n' % (probeID, jnum))
-	#    error = 1
+        #if probeReferenceKey == 0:
+        #    errorFile.write('Invalid Probe Reference:  %s, %s\n' % (probeID, jnum))
+        #    error = 1
 
-	if createdByKey == 0:
-	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
-	    error = 1
+        if createdByKey == 0:
+            errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
+            error = 1
 
         # if errors, continue to next record
         if error:
@@ -380,28 +385,28 @@ def processFile():
 
         # if no errors, process
 
-	# create a new probe-reference key if one does not already exist
-	# else use the existing probe-reference key
+        # create a new probe-reference key if one does not already exist
+        # else use the existing probe-reference key
 
         if probeReferenceKey == 0:
             refFile.write('%s\t%s\t%s\t0\t0\t%s\t%s\t%s\t%s\n' \
-		    % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
-	    aliasrefKey = refKey
-	    refKey = refKey + 1
+                    % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+            aliasrefKey = refKey
+            refKey = refKey + 1
         else:
-	    #errorFile.write('Probe/Reference Already Exists: %s\n' % (tokens))
-	    aliasrefKey = probeReferenceKey
+            #errorFile.write('Probe/Reference Already Exists: %s\n' % (tokens))
+            aliasrefKey = probeReferenceKey
 
         # aliases
 
         for alias in aliasList:
 
-	    if len(alias) == 0:
-		continue
+            if len(alias) == 0:
+                continue
 
             aliasFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-		    % (aliasKey, aliasrefKey, alias, createdByKey, createdByKey, loaddate, loaddate))
-	    aliasKey = aliasKey + 1
+                    % (aliasKey, aliasrefKey, alias, createdByKey, createdByKey, loaddate, loaddate))
+            aliasKey = aliasKey + 1
 
 
     #	end of "for line in inputFile.readlines():"
@@ -416,4 +421,3 @@ setPrimaryKeys()
 processFile()
 bcpFiles()
 exit(0)
-

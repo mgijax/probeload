@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 
 #
 # Program: probeload.py
@@ -173,7 +172,7 @@ loaddate = loadlib.loaddate
 
 def exit(
     status,          # numeric exit status (integer)
-    message = None   # exit message (string)
+    message = None   # exit message (str.
     ):
 
     if message is not None:
@@ -184,7 +183,7 @@ def exit(
         errorFile.write('\n\nEnd Date/Time: %s\n' % (mgi_utils.date()))
         diagFile.close()
         errorFile.close()
-	inputFile.close()
+        inputFile.close()
     except:
         pass
 
@@ -219,12 +218,12 @@ def init():
         diagFile = open(diagFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % diagFileName)
-		
+                
     try:
         errorFile = open(errorFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % errorFileName)
-		
+                
     try:
         inputFile = open(inputFileName, 'r')
     except:
@@ -313,7 +312,7 @@ def verifyMode():
 # Throws:  nothing
 
 def verifyParentProbe(
-    probeID,    # Accession ID of the Probe (string)
+    probeID,    # Accession ID of the Probe (str.
     lineNum,    # line number (integer)
     errorFile   # error file (file descriptor)
     ):
@@ -322,12 +321,12 @@ def verifyParentProbe(
     sourceKey = 0
 
     results = db.sql('''
-        	select a._Object_key, p._Source_key 
-		from ACC_Accession a, PRB_Probe p 
-		where a.accID = '%s'
-		and a._MGIType_key = 3
-		and a._Object_key = p._Probe_key
-		''' % (probeID), 'auto')
+                select a._Object_key, p._Source_key 
+                from ACC_Accession a, PRB_Probe p 
+                where a.accID = '%s'
+                and a._MGIType_key = 3
+                and a._Object_key = p._Probe_key
+                ''' % (probeID), 'auto')
 
     for r in results:
         if r['_Source_key'] is None:
@@ -350,13 +349,13 @@ def setPrimaryKeys():
 
     global probeKey, refKey, aliasKey, accKey, mgiKey
 
-    results = db.sql('select max(_Probe_key) + 1 as maxKey from PRB_Probe', 'auto')
-    probeKey = results[0]['maxKey']
+    results = db.sql('''select nextval('prb_probe_seq') as maxKey''', 'auto')
+    primerKey = results[0]['maxKey']
 
-    results = db.sql('select max(_Reference_key) + 1 as maxKey from PRB_Reference', 'auto')
+    results = db.sql('''select nextval('prb_reference_seq') as maxKey''', 'auto')
     refKey = results[0]['maxKey']
 
-    results = db.sql('select max(_Alias_key) + 1 as maxKey from PRB_Alias', 'auto')
+    results = db.sql('''select nextval('prb_alias_seq') as maxKey''', 'auto')
     aliasKey = results[0]['maxKey']
 
     results = db.sql('select max(_Accession_key) + 1 as maxKey from ACC_Accession', 'auto')
@@ -397,9 +396,19 @@ def bcpFiles():
     bcp7 = bcpCommand % (noteTable, noteFileName)
 
     for bcpCmd in [bcp1, bcp2, bcp3, bcp4, bcp5, bcp6, bcp7]:
-	diagFile.write('%s\n' % bcpCmd)
-	os.system(bcpCmd)
+        diagFile.write('%s\n' % bcpCmd)
+        os.system(bcpCmd)
 
+    # update prb_probe_seq auto-sequence
+    db.sql('''select setval('prb_probe_seq', (select max(_Probe_key) from PRB_Probe))''', None)
+    db.commit()
+
+    # update prb_reference_seq auto-sequence
+    db.sql('''select setval('prb_reference_seq', (select max(_Reference) from PRB_Reference))''', None)
+    db.commit()
+
+    # update prb_alias_seq auto-sequence
+    db.sql('''select setval('prb_alias_seq', (select max(_Alias_key) from PRB_Alias))''', None)
     db.commit()
 
     return
@@ -423,112 +432,112 @@ def processFile():
         lineNum = lineNum + 1
 
         # Split the line into tokens
-        tokens = string.split(line[:-1], '\t')
+        tokens = str.split(line[:-1], '\t')
 
         try:
-	    name = tokens[0]
-	    jnum = tokens[1]
-	    parentID = tokens[2]
-	    sourceName = tokens[3]
-	    organism = tokens[4]
-	    strain = tokens[5]
-	    tissue = tokens[6]
-	    gender = tokens[7]
-	    cellLine = tokens[8]
-	    age = tokens[9]
-	    vectorType = tokens[10]
-	    segmentType = tokens[11]
-	    regionCovered = tokens[12]
-	    insertSite = tokens[13]
-	    insertSize = tokens[14]
-	    markerIDs = string.split(tokens[15], '|')
-	    relationship = tokens[16]
-	    sequenceIDs = tokens[17]
-	    aliasList = string.split(tokens[18], '|')
-	    notes = tokens[19]
-	    rawnotes = tokens[20]
-	    createdBy = tokens[21]
+            name = tokens[0]
+            jnum = tokens[1]
+            parentID = tokens[2]
+            sourceName = tokens[3]
+            organism = tokens[4]
+            strain = tokens[5]
+            tissue = tokens[6]
+            gender = tokens[7]
+            cellLine = tokens[8]
+            age = tokens[9]
+            vectorType = tokens[10]
+            segmentType = tokens[11]
+            regionCovered = tokens[12]
+            insertSite = tokens[13]
+            insertSize = tokens[14]
+            markerIDs = str.split(tokens[15], '|')
+            relationship = tokens[16]
+            sequenceIDs = tokens[17]
+            aliasList = str.split(tokens[18], '|')
+            notes = tokens[19]
+            rawnotes = tokens[20]
+            createdBy = tokens[21]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
-	isParent = 0
-	isSource = 0
-	parentProbeKey = '';
-	sourceKey = 0
+        isParent = 0
+        isSource = 0
+        parentProbeKey = '';
+        sourceKey = 0
 
-	if parentID != '':
-	    isParent = 1
+        if parentID != '':
+            isParent = 1
 
-	if sourceName != '':
-	    isSource = 1
+        if sourceName != '':
+            isSource = 1
 
-	if not isParent and not isSource:
-	    organismKey = sourceloadlib.verifyOrganism(organism, lineNum, errorFile)
-	    strainKey = sourceloadlib.verifyStrain(strain, lineNum, errorFile)
-	    tissueKey = sourceloadlib.verifyTissue(tissue, lineNum, errorFile)
-	    genderKey = sourceloadlib.verifyGender(gender, lineNum, errorFile)
-	    cellLineKey = sourceloadlib.verifyCellLine(cellLine, lineNum, errorFile)
-	    vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
-	    segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
-	    sourceKey = sourceloadlib.verifySource(segmentTypeKey, \
-		vectorKey, organismKey, strainKey, \
-		tissueKey, genderKey, cellLineKey, age, lineNum, errorFile)
+        if not isParent and not isSource:
+            organismKey = sourceloadlib.verifyOrganism(organism, lineNum, errorFile)
+            strainKey = sourceloadlib.verifyStrain(strain, lineNum, errorFile)
+            tissueKey = sourceloadlib.verifyTissue(tissue, lineNum, errorFile)
+            genderKey = sourceloadlib.verifyGender(gender, lineNum, errorFile)
+            cellLineKey = sourceloadlib.verifyCellLine(cellLine, lineNum, errorFile)
+            vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
+            segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
+            sourceKey = sourceloadlib.verifySource(segmentTypeKey, \
+                vectorKey, organismKey, strainKey, \
+                tissueKey, genderKey, cellLineKey, age, lineNum, errorFile)
 
-	    if organismKey == 0 or strainKey == 0 or tissueKey == 0 or \
+            if organismKey == 0 or strainKey == 0 or tissueKey == 0 or \
                genderKey == 0 or cellLineKey == 0 or vectorKey == 0 or \
                segmentTypeKey == 0 or sourceKey == 0:
-		errorFile.write('%s, %s, %s, %s, %s, %s, %s, %s\n' % (segmentType, vectorType, organism, strain, tissue, gender, cellLine, age))
-	        error = 1
+                errorFile.write('%s, %s, %s, %s, %s, %s, %s, %s\n' % (segmentType, vectorType, organism, strain, tissue, gender, cellLine, age))
+                error = 1
 
         elif not isParent and isSource:
-	    vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
-	    segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
-	    sourceKey = sourceloadlib.verifyLibrary(sourceName, lineNum, errorFile)
+            vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
+            segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
+            sourceKey = sourceloadlib.verifyLibrary(sourceName, lineNum, errorFile)
 
-	    if vectorKey == 0 or segmentTypeKey == 0 or sourceKey == 0:
-	        error = 1
+            if vectorKey == 0 or segmentTypeKey == 0 or sourceKey == 0:
+                error = 1
 
-	# parent from = yes, source given = yes or no (ignored)
-	else:
-	    parentProbeKey, sourceKey = verifyParentProbe(parentID, lineNum, errorFile)
-	    vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
-	    segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
+        # parent from = yes, source given = yes or no (ignored)
+        else:
+            parentProbeKey, sourceKey = verifyParentProbe(parentID, lineNum, errorFile)
+            vectorKey = sourceloadlib.verifyVectorType(vectorType, lineNum, errorFile)
+            segmentTypeKey = sourceloadlib.verifySegmentType(segmentType, lineNum, errorFile)
 
-	    if parentProbeKey == 0 or sourceKey == 0 or vectorKey == 0 or segmentTypeKey == 0:
-	        error = 1
+            if parentProbeKey == 0 or sourceKey == 0 or vectorKey == 0 or segmentTypeKey == 0:
+                error = 1
 
         referenceKey = loadlib.verifyReference(jnum, lineNum, errorFile)
-	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+        createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	if referenceKey == 0:
-	    errorFile.write('Invalid Reference:  %s\n' % (jnum))
-	    error = 1
+        if referenceKey == 0:
+            errorFile.write('Invalid Reference:  %s\n' % (jnum))
+            error = 1
 
-	if createdByKey == 0:
-	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
-	    error = 1
+        if createdByKey == 0:
+            errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
+            error = 1
 
-	# marker IDs
+        # marker IDs
 
-	markerList = []
-	for markerID in markerIDs:
+        markerList = []
+        for markerID in markerIDs:
 
-	    markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
+            markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
 
-	    if len(markerID) > 0 and markerKey == 0:
-	        errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
-	        error = 1
+            if len(markerID) > 0 and markerKey == 0:
+                errorFile.write('Invalid Marker:  %s, %s\n' % (name, markerID))
+                error = 1
             elif len(markerID) > 0:
-		markerList.append(markerKey)
+                markerList.append(markerKey)
 
-	# sequence IDs
-	seqAccDict = {}
-	for seqID in string.split(sequenceIDs, '|'):
-	    if len(seqID) > 0:
-	        [logicalDB, acc] = string.split(seqID, ':')
-	        logicalDBKey = loadlib.verifyLogicalDB(logicalDB, lineNum, errorFile)
-	        if logicalDBKey > 0:
-		    seqAccDict[acc] = logicalDBKey
+        # sequence IDs
+        seqAccDict = {}
+        for seqID in str.split(sequenceIDs, '|'):
+            if len(seqID) > 0:
+                [logicalDB, acc] = str.split(seqID, ':')
+                logicalDBKey = loadlib.verifyLogicalDB(logicalDB, lineNum, errorFile)
+                if logicalDBKey > 0:
+                    seqAccDict[acc] = logicalDBKey
 
         # if errors, continue to next record
         if error:
@@ -538,78 +547,78 @@ def processFile():
 
         probeFile.write('%d\t%s\t%s\t%s\t%s\t%s\t\t\t%s\t%s\t%s\t\t%s\t%s\t%s\t%s\n' \
             % (probeKey, name, parentProbeKey, sourceKey, vectorKey, segmentTypeKey, mgi_utils.prvalue(regionCovered), \
-	    mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), createdByKey, createdByKey, loaddate, loaddate))
+            mgi_utils.prvalue(insertSite), mgi_utils.prvalue(insertSize), createdByKey, createdByKey, loaddate, loaddate))
 
-	for markerKey in markerList:
-	    if markerList.count(markerKey) == 1:
+        for markerKey in markerList:
+            if markerList.count(markerKey) == 1:
                 markerFile.write('%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\n' \
-		    % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
+                    % (probeKey, markerKey, referenceKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
             else:
-		errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
+                errorFile.write('Invalid Marker Duplicate:  %s, %s\n' % (name, markerID))
 
         refFile.write('%s\t%s\t%s\t0\t0\t%s\t%s\t%s\t%s\n' \
-		% (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
+                % (refKey, probeKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # aliases
 
         for alias in aliasList:
-	    if len(alias) == 0:
-		continue
+            if len(alias) == 0:
+                continue
             aliasFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-		    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
-	    aliasKey = aliasKey + 1
+                    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
+            aliasKey = aliasKey + 1
 
         # MGI Accession ID for the marker
 
         accFile.write('%s\t%s%d\t%s\t%s\t1\t%d\t%d\t0\t1\t%s\t%s\t%s\t%s\n' \
             % (accKey, mgiPrefix, mgiKey, mgiPrefix, mgiKey, probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
 
-	# Print out a new text file and attach the new MGI Probe IDs as the last field
+        # Print out a new text file and attach the new MGI Probe IDs as the last field
 
         newProbeFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%d\n' \
-	    % (name, jnum, \
-	    mgi_utils.prvalue(sourceName), \
-	    organism, \
-	    mgi_utils.prvalue(strain), \
-	    mgi_utils.prvalue(tissue), \
-	    mgi_utils.prvalue(gender), \
-	    mgi_utils.prvalue(cellLine), \
-	    mgi_utils.prvalue(age), \
-	    mgi_utils.prvalue(vectorType), \
-	    mgi_utils.prvalue(segmentType), \
-	    mgi_utils.prvalue(regionCovered) + \
-	    mgi_utils.prvalue(insertSite), \
-	    mgi_utils.prvalue(insertSize), \
-	    string.join(markerIDs, '|'), \
-	    relationship, \
-	    mgi_utils.prvalue(sequenceIDs), \
-	    string.join(aliasList, '|'), \
-	    mgi_utils.prvalue(notes), \
-	    createdBy, mgiPrefix, mgiKey))
+            % (name, jnum, \
+            mgi_utils.prvalue(sourceName), \
+            organism, \
+            mgi_utils.prvalue(strain), \
+            mgi_utils.prvalue(tissue), \
+            mgi_utils.prvalue(gender), \
+            mgi_utils.prvalue(cellLine), \
+            mgi_utils.prvalue(age), \
+            mgi_utils.prvalue(vectorType), \
+            mgi_utils.prvalue(segmentType), \
+            mgi_utils.prvalue(regionCovered) + \
+            mgi_utils.prvalue(insertSite), \
+            mgi_utils.prvalue(insertSize), \
+            str.join(markerIDs, '|'), \
+            relationship, \
+            mgi_utils.prvalue(sequenceIDs), \
+            str.join(aliasList, '|'), \
+            mgi_utils.prvalue(notes), \
+            createdBy, mgiPrefix, mgiKey))
 
-	# Print out a raw note file
+        # Print out a raw note file
 
         if len(rawnotes) > 0:
             rawNoteFile.write('%s%d\t%s\n' % (mgiPrefix, mgiKey, rawnotes))
 
-	# Notes
+        # Notes
 
         if len(notes) > 0:
-	    noteFile.write('%s\t%s\t%s\t%s\n' % (probeKey, notes, loaddate, loaddate))
+            noteFile.write('%s\t%s\t%s\t%s\n' % (probeKey, notes, loaddate, loaddate))
 
         accKey = accKey + 1
         mgiKey = mgiKey + 1
 
-	# sequence accession ids
-	for acc in seqAccDict.keys():
-	    prefixPart, numericPart = accessionlib.split_accnum(acc)
+        # sequence accession ids
+        for acc in list(seqAccDict.keys()):
+            prefixPart, numericPart = accessionlib.split_accnum(acc)
             accFile.write('%s\t%s\t%s\t%s\t%s\t%d\t%d\t0\t1\t%s\t%s\t%s\t%s\n' \
                 % (accKey, acc, prefixPart, numericPart, seqAccDict[acc], probeKey, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
             accRefFile.write('%s\t%s\t%s\t%s\t%s\t%s\n' \
                 % (accKey, referenceKey, createdByKey, createdByKey, loaddate, loaddate))
-	    accKey = accKey + 1
+            accKey = accKey + 1
 
-	refKey = refKey + 1
+        refKey = refKey + 1
         probeKey = probeKey + 1
 
     #	end of "for line in inputFile.readlines():"
@@ -631,4 +640,3 @@ setPrimaryKeys()
 processFile()
 bcpFiles()
 exit(0)
-

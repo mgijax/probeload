@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 
 #
 # Program: probeextras.py
@@ -124,7 +123,7 @@ execSQL = []
 
 def exit(
     status,          # numeric exit status (integer)
-    message = None   # exit message (string)
+    message = None   # exit message (str.
     ):
 
     if message is not None:
@@ -135,7 +134,7 @@ def exit(
         errorFile.write('\n\nEnd Date/Time: %s\n' % (mgi_utils.date()))
         diagFile.close()
         errorFile.close()
-	inputFile.close()
+        inputFile.close()
     except:
         pass
 
@@ -169,12 +168,12 @@ def init():
         diagFile = open(diagFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % diagFileName)
-		
+                
     try:
         errorFile = open(errorFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % errorFileName)
-		
+                
     try:
         inputFile = open(inputFileName, 'r')
     except:
@@ -233,10 +232,10 @@ def setPrimaryKeys():
 
     global refKey, aliasKey
 
-    results = db.sql('select maxKey = max(_Reference_key) + 1 from PRB_Reference', 'auto')
+    results = db.sql('''select nextval('prb_reference_seq') as maxKey''', 'auto')
     refKey = results[0]['maxKey']
 
-    results = db.sql('select maxKey = max(_Alias_key) + 1 from PRB_Alias', 'auto')
+    results = db.sql('''select nextval('prb_alias_seq') as maxKey''', 'auto')
     aliasKey = results[0]['maxKey']
 
 # Purpose:  BCPs the data into the database
@@ -248,7 +247,7 @@ def setPrimaryKeys():
 def bcpFiles():
 
     if DEBUG or not bcpon:
-	#print execSQL
+        #print execSQL
         return
 
     markerFile.close()
@@ -266,9 +265,15 @@ def bcpFiles():
         db.sql(r, None)
 
     for bcpCmd in [bcp1, bcp2, bcp3]:
-	diagFile.write('%s\n' % bcpCmd)
-	os.system(bcpCmd)
+        diagFile.write('%s\n' % bcpCmd)
+        os.system(bcpCmd)
 
+    # update prb_reference_seq auto-sequence
+    db.sql('''select setval('prb_reference_seq', (select max(_Reference) from PRB_Reference))''', None)
+    db.commit()
+
+    # update prb_alias_seq auto-sequence
+    db.sql('''select setval('prb_alias_seq', (select max(_Alias_key) from PRB_Alias))''', None)
     db.commit()
 
     return
@@ -292,58 +297,58 @@ def processFile():
         lineNum = lineNum + 1
 
         # Split the line into tokens
-        tokens = string.split(line[:-1], '\t')
+        tokens = str.split(line[:-1], '\t')
 
         try:
-	    probeID = tokens[0]
-	    markerIDs = string.split(tokens[1], '|')
-	    jnum = tokens[2]
-	    relationship = tokens[3]
-	    aliasList = string.split(tokens[4], '|')
-	    createdBy = tokens[5]
+            probeID = tokens[0]
+            markerIDs = str.split(tokens[1], '|')
+            jnum = tokens[2]
+            relationship = tokens[3]
+            aliasList = str.split(tokens[4], '|')
+            createdBy = tokens[5]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
         probeKey = loadlib.verifyProbe(probeID, lineNum, errorFile)
         refsKey = loadlib.verifyReference(jnum, lineNum, errorFile)
-	createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
+        createdByKey = loadlib.verifyUser(createdBy, lineNum, errorFile)
 
-	if probeKey == 0:
-	    errorFile.write('Invalid Probe:  %s\n' % (probeID))
-	    error = 1
+        if probeKey == 0:
+            errorFile.write('Invalid Probe:  %s\n' % (probeID))
+            error = 1
 
-	if refsKey == 0:
-	    errorFile.write('Invalid Reference:  %s\n' % (jnum))
-	    error = 1
+        if refsKey == 0:
+            errorFile.write('Invalid Reference:  %s\n' % (jnum))
+            error = 1
 
-	if createdByKey == 0:
-	    errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
-	    error = 1
+        if createdByKey == 0:
+            errorFile.write('Invalid Creator:  %s\n\n' % (createdBy))
+            error = 1
 
-	results = db.sql('''select _Reference_key from PRB_Reference
-		where _Probe_key = %s
-		and _Refs_key = %s
-		''' % (probeKey, refsKey), 'auto')
+        results = db.sql('''select _Reference_key from PRB_Reference
+                where _Probe_key = %s
+                and _Refs_key = %s
+                ''' % (probeKey, refsKey), 'auto')
         referenceKey = results[0]['_Reference_key']
-	if referenceKey == 0:
-	    errorFile.write('Invalid Probe/Reference:  %s\n' % (jnum))
-	    error = 1
+        if referenceKey == 0:
+            errorFile.write('Invalid Probe/Reference:  %s\n' % (jnum))
+            error = 1
 
-	# marker IDs
+        # marker IDs
 
-	markerList = []
-	for markerID in markerIDs:
+        markerList = []
+        for markerID in markerIDs:
 
-	    if markerID == 'none':
-		break
+            if markerID == 'none':
+                break
 
-	    markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
+            markerKey = loadlib.verifyMarker(markerID, lineNum, errorFile)
 
-	    if markerKey == 0:
-	        errorFile.write('Invalid Marker:  %s\n' % (markerID))
-	        error = 1
+            if markerKey == 0:
+                errorFile.write('Invalid Marker:  %s\n' % (markerID))
+                error = 1
             else:
-		markerList.append(markerKey)
+                markerList.append(markerKey)
 
         # if errors, continue to next record
         if error:
@@ -351,29 +356,29 @@ def processFile():
 
         # if no errors, process
 
-	for markerKey in markerList:
-	    if markerList.count(markerKey) == 1:
+        for markerKey in markerList:
+            if markerList.count(markerKey) == 1:
                 markerFile.write('%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\n' \
-		    % (probeKey, markerKey, refsKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
-		execSQL.append(deleteSQL % (probeKey, markerKey))
+                    % (probeKey, markerKey, refsKey, relationship, createdByKey, createdByKey, loaddate, loaddate))
+                execSQL.append(deleteSQL % (probeKey, markerKey))
             else:
-		errorFile.write('Invalid Marker Duplicate:  %s\n' % (markerID))
+                errorFile.write('Invalid Marker Duplicate:  %s\n' % (markerID))
 
-	if referenceKey > 0:
-	    refKey = referenceKey
-	else:
+        if referenceKey > 0:
+            refKey = referenceKey
+        else:
             refFile.write('%s\t%s\t%s\t0\t0\t%s\t%s\t%s\t%s\n' \
-		    % (refKey, probeKey, refsKey, createdByKey, createdByKey, loaddate, loaddate))
+                    % (refKey, probeKey, refsKey, createdByKey, createdByKey, loaddate, loaddate))
 
         # aliases
 
         for alias in aliasList:
             aliasFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-		    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
-	    aliasKey = aliasKey + 1
+                    % (aliasKey, refKey, alias, createdByKey, createdByKey, loaddate, loaddate))
+            aliasKey = aliasKey + 1
 
-	# only used if referenceKey == 0
-	refKey = refKey + 1
+        # only used if referenceKey == 0
+        refKey = refKey + 1
 
     #	end of "for line in inputFile.readlines():"
 
@@ -387,4 +392,3 @@ setPrimaryKeys()
 processFile()
 bcpFiles()
 exit(0)
-

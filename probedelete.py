@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 
 #
 # Program: probedelete.py
@@ -89,7 +88,7 @@ loaddate = loadlib.loaddate
 
 def exit(
     status,          # numeric exit status (integer)
-    message = None   # exit message (string)
+    message = None   # exit message (str.
     ):
 
     if message is not None:
@@ -100,7 +99,7 @@ def exit(
         errorFile.write('\n\nEnd Date/Time: %s\n' % (mgi_utils.date()))
         diagFile.close()
         errorFile.close()
-	inputFile.close()
+        inputFile.close()
     except:
         pass
 
@@ -130,12 +129,12 @@ def init():
         diagFile = open(diagFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % diagFileName)
-		
+                
     try:
         errorFile = open(errorFileName, 'w')
     except:
         exit(1, 'Could not open file %s\n' % errorFileName)
-		
+                
     try:
         inputFile = open(inputFileName, 'r')
     except:
@@ -185,23 +184,23 @@ def processFile():
         lineNum = lineNum + 1
 
         # Split the line into tokens
-        tokens = string.split(line[:-1], '\t')
+        tokens = str.split(line[:-1], '\t')
 
         try:
-	    probeID = tokens[0]
+            probeID = tokens[0]
         except:
             exit(1, 'Invalid Line (%d): %s\n' % (lineNum, line))
 
         probeKey = loadlib.verifyObject(probeID, mgiTypeKey, None, lineNum, errorFile)
 
-	if probeKey == 0:
+        if probeKey == 0:
             continue
 
-	if DEBUG:
-	    print deleteSQL % (probeKey)
-	    continue
+        if DEBUG:
+            print(deleteSQL % (probeKey))
+            continue
 
-	db.sql(deleteSQL % (probeKey), None)
+        db.sql(deleteSQL % (probeKey), None)
 
     #	end of "for line in inputFile.readlines():"
 
@@ -213,4 +212,3 @@ init()
 verifyMode()
 processFile()
 exit(0)
-
