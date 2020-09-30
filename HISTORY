@@ -1,3 +1,11 @@
+TAG: probeload-6-0-?-?
+DATE: 09/30/2020
+STAFF: lec
+CHANGES: TR13349/Genome Build 39 project
+converted to python 3
+made schema changes
+this is on-demand, so did not actually test
+
 TAG: probeload-6-0-12-4
 DATE: 08/06/2018
 STAFF: lec
